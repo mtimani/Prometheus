@@ -7,7 +7,7 @@ Prometheus is a collection of two recon scripts for Red Team and Web blackbox au
 - **asset_discovery**: a small script that allows to perform DNS asset discovery, Nuclei scans, determine used technologies, find known URLs, take screenshots of found web assets by combining the output of several tools.
 - **blackbox_audit**: script that does a lot of blackbox tests (Ping, Nmap, DNS+DNSSec tests, sslscan + testssl) on a set of hosts you provide to the script.
 
-![image_2](https://github.com/user-attachments/assets/3f5ad82c-f972-4d3d-bebc-78c89f7da8a7)
+![image_2](https://github.com/user-attachments/assets/3f5ad82c-f972-4d3d-bebc-78c89f7da8a7) 
 
 ## 📖 Documentation
 
