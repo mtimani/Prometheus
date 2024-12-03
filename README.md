@@ -18,7 +18,7 @@ Alternatively you can check the [Not Recommended User Guide](../../wiki/4.-User-
 - aiodnsbrute (https://github.com/blark/aiodnsbrute)
 - SANextract (https://github.com/hvs-consulting/SANextract)
 
-**Additionnal tools**:
+**Additionnal Tools**:
 - httpx (https://github.com/projectdiscovery/httpx)
 - nuclei (https://github.com/projectdiscovery/nuclei)
 - gau (https://github.com/lc/gau)
