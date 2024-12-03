@@ -11,7 +11,7 @@ To start, check the [Installation](../../wiki/2.-Installation) page and the [Rec
 
 Alternatively you can check the [Not Recommended User Guide](../../wiki/4.-User-Guide-‐-Standalone-‐-Not-recommended) that describes the usage of the recon scripts without Docker container.
 
-## DISCLAIMER 
+## Disclaimer
 This tool is intended for educational purposes only. Performing hacking attempts on computers that you do not own (without permission) is illegal! Do not attempt to gain access to devices that you do not own.
 
 ## asset_discovery is using the following tools to generate its results 
