@@ -10,3 +10,18 @@ Prometheus is a collection of two recon scripts for Red Team and Web blackbox au
 To start, check the [Installation](../../wiki/2.-Installation) page and the [Recommended User Guide](../../wiki/3.-User-Guide-‐-With-Docker-‐-Recommended) that describes the usage of the tool with a Docker container and a simple wrapper script.
 
 Alternatively you can check the [Not Recommended User Guide](../../wiki/4.-User-Guide-‐-Standalone-‐-Not-recommended) that describes the usage of the recon scripts without Docker container.
+
+## Tools used to generate results in Asset_Discovery
+**Subdomain Discovery**:
+- subfinder (https://github.com/projectdiscovery/subfinder)
+- findomain (https://github.com/Findomain/Findomain)
+- aiodnsbrute (https://github.com/blark/aiodnsbrute)
+- SANextract (https://github.com/hvs-consulting/SANextract)
+
+**Additionnal tools**:
+- httpx (https://github.com/projectdiscovery/httpx)
+- nuclei (https://github.com/projectdiscovery/nuclei)
+- gau (https://github.com/lc/gau)
+- webanalyze (https://github.com/rverton/webanalyze)
+- eyewitness (https://github.com/RedSiege/EyeWitness)
+- wafw00f (https://github.com/EnableSecurity/wafw00f)
