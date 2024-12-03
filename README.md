@@ -2,6 +2,11 @@
 
 Welcome to the Prometheus repo!
 
+![3f6cfea3-dbb2-405c-bb57-bd410496bec3](https://github.com/user-attachments/assets/fa21ec5f-1fed-4bc5-94c2-2851b928dc52)
+
+
+## Description
+
 Prometheus is a collection of two recon scripts for Red Team and Web blackbox auditing:
 
 - **asset_discovery**: a small script that allows to perform DNS asset discovery, Nuclei scans, determine used technologies, find known URLs, take screenshots of found web assets by combining the output of several tools.
