@@ -11,7 +11,7 @@ To start, check the [Installation](../../wiki/2.-Installation) page and the [Rec
 
 Alternatively you can check the [Not Recommended User Guide](../../wiki/4.-User-Guide-‐-Standalone-‐-Not-recommended) that describes the usage of the recon scripts without Docker container.
 
-## Tools used to generate results in Asset_Discovery
+## Asset_Discovery is using the following tools to generate its results 
 **Subdomain Discovery**:
 - subfinder (https://github.com/projectdiscovery/subfinder)
 - findomain (https://github.com/Findomain/Findomain)
