@@ -103,13 +103,13 @@ def nmap_f(directory, domain):
 
     ### Check if Ping failed
     ping_failed = False
-    for line in output.decode('ascii').splitlines():
+    for line in output.decode().splitlines():
         if "100% packet loss" in line:
             ping_failed = True
     
     ### Write output of ping command to file
     with open(directory + "/01.Nmap/01.Ping/" + domain + "/ping.txt","w") as fp:
-        fp.write(output.decode('ascii'))
+        fp.write(output.decode())
     
     ## Nmap scan
     ### Print to console
@@ -143,7 +143,7 @@ def dns_f(directory, domain):
 
     ### Write output of dig command to file
     with open(directory + "/02.DNS/" + domain + "/dig_url.txt","w") as fp:
-        fp.write(output.decode('ascii'))
+        fp.write(output.decode())
 
     ### Nslookup domain
     bashCommand = "nslookup " + domain
@@ -152,7 +152,7 @@ def dns_f(directory, domain):
 
     ### Write output of dig command to file
     with open(directory + "/02.DNS/" + domain + "/nslookup_url.txt","w") as fp:
-        fp.write(output.decode('ascii'))
+        fp.write(output.decode())
 
     ### DNS Recon
     bashCommand = "dnsrecon -d " + domain + " -n " + dns_server
@@ -161,7 +161,7 @@ def dns_f(directory, domain):
 
     ### Write output of dig command to file
     with open(directory + "/02.DNS/" + domain + "/dnssec.txt","w") as fp:
-        fp.write(output.decode('ascii'))
+        fp.write(output.decode())
 
     ### IP resolution
     IPs = []
@@ -185,7 +185,7 @@ def dns_f(directory, domain):
 
         ### Write output of dig command to file
         with open(directory + "/02.DNS/" + domain + "/dig_ip_" + str(counter) + ".txt","w") as fp:
-            fp.write(output.decode('ascii'))
+            fp.write(output.decode())
 
         ### Dig -x IP
         bashCommand = "dig -x " + ip
@@ -194,7 +194,7 @@ def dns_f(directory, domain):
 
         ### Write output of dig command to file
         with open(directory + "/02.DNS/" + domain + "/dig_x_ip_" + str(counter) + ".txt","w") as fp:
-            fp.write(output.decode('ascii'))
+            fp.write(output.decode())
 
         ### Nslookup IP
         bashCommand = "nslookup " + ip
@@ -203,7 +203,7 @@ def dns_f(directory, domain):
 
         ### Write output of dig command to file
         with open(directory + "/02.DNS/" + domain + "/nslookup_ip_" + str(counter) + ".txt","w") as fp:
-            fp.write(output.decode('ascii'))
+            fp.write(output.decode())
 
         ### Whois IP
         bashCommand = "whois " + ip
@@ -289,7 +289,7 @@ def ssl_f(directory, domain, port):
 
         ### Write output of testssl command to file
         with open(working_dir + "/testssl.txt","w") as fp:
-            fp.write(output.decode('ascii'))
+            fp.write(output.decode())
 
         ## TestSSL json
         output_file = working_dir + "/testssl.json"
@@ -504,7 +504,7 @@ def ssh_f(directory, domain, port):
     output, error = process.communicate()
 
     with open(output_location, "w") as fp:
-        fp.write(output.decode('ascii'))
+        fp.write(output.decode())
 
 
 
@@ -644,7 +644,7 @@ def http_f(directory, domain, port):
 
         ### Write output to file
         with open(working_dir + "/WAF/wafw00f.txt", "w") as fp:
-            fp.write(output.decode('ascii'))
+            fp.write(output.decode())
 
     except:
         cprint("\tError running wafw00f for " + domain + " port " + port, 'red')
@@ -684,12 +684,12 @@ def http_f(directory, domain, port):
 
         ### Write analysis to output file
         with open(working_dir + "/HTTP_Headers/header_analysis.txt", "w") as fp:
-            fp.write(output.decode('ascii'))
+            fp.write(output.decode())
 
         ### Write colored analysis to output file
         with open(working_dir + "/HTTP_Headers/header_analysis_colored.txt", "w") as fp:
             out = ""
-            for line in output.decode('ascii').splitlines():
+            for line in output.decode().splitlines():
                 if "Header Field Name:" in line:
                     out = out + os.linesep + "\033[0;31m" + line + "\033[0m"
                 elif "Value:" in line:
@@ -701,7 +701,7 @@ def http_f(directory, domain, port):
         ### Write only headers to output file
         with open(working_dir + "/HTTP_Headers/headers_only.txt", "w") as fp:
             out = ""
-            for line in output.decode('ascii').splitlines():
+            for line in output.decode().splitlines():
                 if "Header Field Name:" in line:
                     out = out + os.linesep + line
                 elif "Value:" in line:
@@ -791,7 +791,7 @@ def https_f(directory, domain, port):
 
         ### Write output to file
         with open(working_dir + "/WAF/wafw00f.txt", "w") as fp:
-            fp.write(output.decode('ascii'))
+            fp.write(output.decode())
 
     except:
         cprint("\tError running wafw00f for " + domain + " port " + port, 'red')
@@ -831,7 +831,7 @@ def https_f(directory, domain, port):
         ### Write colored analysis to output file
         with open(working_dir + "/HTTPS_Headers/header_analysis_colored.txt", "w") as fp:
             out = ""
-            for line in output.decode('ascii').splitlines():
+            for line in output.decode().splitlines():
                 if "Header Field Name:" in line:
                     out = out + os.linesep + "\033[0;31m" + line + "\033[0m"
                 elif "Value:" in line:
@@ -843,7 +843,7 @@ def https_f(directory, domain, port):
         ### Write only headers to output file
         with open(working_dir + "/HTTPS_Headers/headers_only.txt", "w") as fp:
             out = ""
-            for line in output.decode('ascii').splitlines():
+            for line in output.decode().splitlines():
                 if "Header Field Name:" in line:
                     out = out + os.linesep + line
                 elif "Value:" in line:
@@ -908,7 +908,7 @@ def telnet_f(directory, domain, port):
     process = subprocess.Popen(bashCommand.split(), stdout=subprocess.PIPE)
     output, error = process.communicate()
     with open(output_location, "w") as fp:
-        fp.write(output.decode('ascii'))
+        fp.write(output.decode())
 
 
 
