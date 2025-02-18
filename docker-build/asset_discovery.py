@@ -125,14 +125,14 @@ def worker_f(directory, root_domain, found_domains, subfinder_provider_configura
     
     process = subprocess.Popen(bashCommand.split(), stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     output, error = process.communicate()
-    for i in output.decode('ascii').splitlines():
+    for i in output.decode().splitlines():
         found_domains.append(i)
         
     ## Findomain
     bashCommand = findomain_path + " -q -t " + root_domain
     process = subprocess.Popen(bashCommand.split(), stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     output, error = process.communicate()
-    for i in output.decode('ascii').splitlines():
+    for i in output.decode().splitlines():
         if i != "":
             found_domains.append(i)
     
@@ -141,7 +141,7 @@ def worker_f(directory, root_domain, found_domains, subfinder_provider_configura
     process = subprocess.Popen(bashCommand.split(), stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     output, error = process.communicate()
     ### Found subdomains extraction
-    out = output.decode('ascii').splitlines()
+    out = output.decode().splitlines()
     substring = '[+]'
     temp = [item for item in out if substring.lower() in item.lower()]
     for i in temp:
@@ -187,7 +187,7 @@ def httpx_f(directory, subdomain_list_file):
     bashCommand = "httpx -l " + subdomain_list_file + " -t 150 -rl 3000 -p http:80,https:443,http:8080,https:8443,http:8000,http:3000,http:5000,http:10000 -timeout 3 -probe"
     process = subprocess.Popen(bashCommand.split(), stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     output, error = process.communicate()
-    out = output.decode('ascii').splitlines()
+    out = output.decode().splitlines()
 
     urls = []
 
@@ -221,7 +221,7 @@ def domains_discovery(directory, hosts, subfinder_provider_configuration_file):
     bashCommand = "httpx -l " + directory + "/found_domains.txt.tmp -t 150 -rl 3000 -p http:80,https:443,http:8080,https:8443,http:8000,http:3000,http:5000,http:10000 -timeout 3 -probe"
     process = subprocess.Popen(bashCommand.split(), stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     output, error = process.communicate()
-    out = output.decode('ascii').splitlines()
+    out = output.decode().splitlines()
     
     urls = []
 
@@ -246,7 +246,7 @@ def domains_discovery(directory, hosts, subfinder_provider_configuration_file):
         bashCommand_2 = SANextract_path + " -timeout 1s"
         p1 = subprocess.Popen(bashCommand_1.split(), stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         p2 = subprocess.Popen(bashCommand_2.split(), stdin=p1.stdout, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-        for j in p2.stdout.read().decode('ascii').splitlines():
+        for j in p2.stdout.read().decode().splitlines():
             if len(j) != 0:
                 if j[0] != '*':
                     temp.append(j)
@@ -501,7 +501,7 @@ def determine_waf_worker(url):
 
         ### Bash color removal 
         ansi_escape = re.compile(r'\x1B(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~])')
-        response = ansi_escape.sub('', output.decode('ascii'))
+        response = ansi_escape.sub('', output.decode())
 
         ## Result extraction
         if ("is behind" in response):
