@@ -212,7 +212,7 @@ def dns_f(directory, domain):
 
         ### Write output of dig command to file
         with open(directory + "/02.DNS/" + domain + "/whois_ip_" + str(counter) + ".txt","w") as fp:
-            fp.write(output.decode('ascii'))
+            fp.write(output.decode().lower())
 
 
 
