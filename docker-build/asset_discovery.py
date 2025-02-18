@@ -156,7 +156,10 @@ def first_domain_scan(directory, hosts, subfinder_provider_configuration_file):
     found_domains = hosts.copy()
 
     ## Print to console
-    cprint("\n\n\nFinding subdomains for specified root domains:\n", 'red')
+    cprint("\nFinding subdomains for specified root domains:\n", 'red')
+
+    for domain in root_domains:
+        print('- ' + domain)
 
     counter = len(root_domains)
 
@@ -178,7 +181,7 @@ def first_domain_scan(directory, hosts, subfinder_provider_configuration_file):
 #-------------httpx Function--------------#
 def httpx_f(directory, subdomain_list_file):
     ## Print to console
-    cprint("\n\n\nRunning httpx, a project discovery tool on the provided subdomains\n", 'red')
+    cprint("\nRunning httpx, a project discovery tool on the provided subdomains\n", 'red')
 
     ## httpx - project discovery
     bashCommand = "httpx -l " + subdomain_list_file + " -t 150 -rl 3000 -p http:80,https:443,http:8080,https:8443,http:8000,http:3000,http:5000,http:10000 -timeout 3 -probe"
@@ -205,7 +208,7 @@ def domains_discovery(directory, hosts, subfinder_provider_configuration_file):
     found_domains = first_domain_scan(directory, hosts, subfinder_provider_configuration_file)
 
     ## Remove wildcard domains
-    cprint("\n\n\nRunning wildcard DNS cleaning function\n", 'red')
+    cprint("\nRunning wildcard DNS cleaning function\n", 'red')
     cleaned_domains = dns_resolver(found_domains)
 
     ## httpx - project discovery
@@ -266,7 +269,7 @@ def domains_discovery(directory, hosts, subfinder_provider_configuration_file):
 #---------IP Discovery Function---------#
 def IP_discovery(directory, found_domains):
     ## Print to console
-    cprint("\n\nFinding IPs for found subdomains:\n",'red')
+    cprint("\nFinding IPs for found subdomains\n",'red')
 
     ## Variables initialization
     ip_dict = {}
@@ -305,7 +308,7 @@ def IP_discovery(directory, found_domains):
 #-------------Whois Function------------#
 def whois(directory,ip_list,ip_dict):
     ## Print to console
-    cprint("\n\n\nWhois magic\n",'red')
+    cprint("\nWhois magic\n",'red')
 
     ## Create Whois directory
     try:
@@ -528,7 +531,7 @@ def determine_waf_worker(url):
 #---------Determine WAF Function---------#
 def determine_waf(directory):
     ## Print to console
-    cprint("\n\n\nFinding WAFs located in front of the found web assets with wafw00f:\n", 'red')
+    cprint("\nFinding WAFs located in front of the found web assets with wafw00f:\n", 'red')
 
     ## Constants declarations
     urls = []
@@ -561,7 +564,7 @@ def determine_waf(directory):
 #---------Nuclei Function Launch--------#
 def nuclei_f(directory, domain_list_file = "/domain_list.txt"):
     ## Print to console
-    cprint("\n\n\nNuclei scan launched!\n",'red')
+    cprint("\nNuclei scan launched!\n",'red')
 
     ## Create Nuclei output directory
     dir_path = directory + "/Nuclei"
@@ -617,7 +620,7 @@ def nuclei_f(directory, domain_list_file = "/domain_list.txt"):
 #---------Screenshot Function Launch--------#
 def screenshot_f(directory, domain_list_file = "/domain_list.txt"):
     ## Print to console
-    cprint("\n\n\nScreenshots of found web assets with EyeWitness launched!\n",'red')
+    cprint("\nScreenshots of found web assets with EyeWitness launched!\n",'red')
     
     ## EyeWitness tool launch
     ### If root domain list is provided
@@ -656,7 +659,7 @@ def webanalyzer_worker(directory, domain):
 #-------Webanalyzer Function Launch------#
 def webanalyzer_f(directory, found_domains):
     ## Print to console
-    cprint("\n\n\nFinding used technologies by the found web assets with Webanalyzer:", 'red')
+    cprint("\nFinding used technologies by the found web assets with Webanalyzer:", 'red')
 
     ## Create output directories
     try:
@@ -724,7 +727,7 @@ def webanalyzer_f(directory, found_domains):
 #--------------Gau Function-------------#
 def gau_f(directory, domain_list_file = "/domain_list.txt"):
     ## Print to console
-    cprint("\n\n\nFinding interresting URLs based on found web assets\n", 'red')
+    cprint("\nFinding interresting URLs based on found web assets\n", 'red')
 
     ## Launch Gau Tool
     try:
@@ -940,7 +943,7 @@ def main(args):
         else:
             nuclei_f(directory, subdomain_list_file)
 
-    cprint("\n\nAll tests complete, good hacking to you young padawan!",'green')
+    cprint("\nAll tests complete, good hacking to you young padawan!",'green')
 
 
 
