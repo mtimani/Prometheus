@@ -329,7 +329,7 @@ def whois(directory,ip_list,ip_dict):
                 bashCommand = "whois " + ip
                 process = subprocess.Popen(bashCommand.split(), stdout=subprocess.PIPE, stderr=subprocess.PIPE)
                 output, error = process.communicate()
-                whois_list.append(output.decode('ascii'))
+                whois_list.append(output.decode().lower())
             except:
                 cprint("Error: Failed to whois the following IP address : " + ip + "\n", 'red')
 
@@ -338,7 +338,7 @@ def whois(directory,ip_list,ip_dict):
 
     ## Find correct name for whois file and write to file
     value_1 = "inetnum:"
-    value_2 = "CIDR:"
+    value_2 = "cidr:"
     cnt     = 0
     for whois_element in whois_list:
         ### Variable initialization
@@ -366,7 +366,7 @@ def whois(directory,ip_list,ip_dict):
             fp.writelines(whois_element)
 
         ### Complete dictionnary
-        value_3  = "Organization:"
+        value_3  = "organization:"
         value_4  = "org-name:"
         value_5  = "netname:"
         value_6  = "org:"
