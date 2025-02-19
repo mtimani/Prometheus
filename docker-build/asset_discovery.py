@@ -164,12 +164,11 @@ def first_domain_scan(directory, hosts, subfinder_provider_configuration_file):
     counter = len(root_domains)
 
     ## Loop over root domains
-    with alive_progress.alive_bar(counter, ctrl_c=True, title=f'Subdomain search and bruteforce (Can take time)') as bar:
-        with concurrent.futures.ThreadPoolExecutor(max_workers=50) as executor:
-            future_f = {executor.submit(worker_f, directory, root_domain, found_domains, subfinder_provider_configuration_file): root_domain for root_domain in root_domains}
-            
-            for future in concurrent.futures.as_completed(future_f):
-                bar()
+    with concurrent.futures.ThreadPoolExecutor(max_workers=50) as executor:
+        future_f = {executor.submit(worker_f, directory, root_domain, found_domains, subfinder_provider_configuration_file): root_domain for root_domain in root_domains}
+        
+        for future in concurrent.futures.as_completed(future_f):
+            pass
     
     ## Sort - Uniq Found domains list
     found_domains = sorted(set(found_domains))
@@ -279,19 +278,17 @@ def IP_discovery(directory, found_domains):
     counter = len(found_domains)
 
     ## IP addresses lookup
-    with alive_progress.alive_bar(counter, ctrl_c=True, title=f'IP address resolution') as bar:
-        for domain in found_domains:
-            bar()
-            try:
-                ais = socket.getaddrinfo(domain,0,socket.AF_INET,0,0)
-                IPs = []
-                for result in ais:
-                    IPs.append(result[-1][0])
-                    ip_list.append(result[-1][0])
-                IPs = sorted(set(IPs))
-                ip_dict[domain] = IPs.copy()
-            except:
-                None
+    for domain in found_domains:
+        try:
+            ais = socket.getaddrinfo(domain,0,socket.AF_INET,0,0)
+            IPs = []
+            for result in ais:
+                IPs.append(result[-1][0])
+                ip_list.append(result[-1][0])
+            IPs = sorted(set(IPs))
+            ip_dict[domain] = IPs.copy()
+        except:
+            None
     
     ## Sort and uniq IP addresses
     ip_list = sorted(set(ip_list))
@@ -325,16 +322,14 @@ def whois(directory,ip_list,ip_dict):
     counter = len(ip_list)
 
     ## Whois list retreival
-    with alive_progress.alive_bar(counter, ctrl_c=True, title=f'Whois resolution') as bar:
-        for ip in ip_list:
-            bar()
-            try:
-                bashCommand = "whois " + ip
-                process = subprocess.Popen(bashCommand.split(), stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-                output, error = process.communicate()
-                whois_list.append(output.decode().lower())
-            except:
-                cprint("Error: Failed to whois the following IP address : " + ip + "\n", 'red')
+    for ip in ip_list:
+        try:
+            bashCommand = "whois " + ip
+            process = subprocess.Popen(bashCommand.split(), stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            output, error = process.communicate()
+            whois_list.append(output.decode().lower())
+        except:
+            cprint("Error: Failed to whois the following IP address : " + ip + "\n", 'red')
 
     ## Sort - Uniq on the retreived whois_list
     whois_list = sorted(set(whois_list))
@@ -539,8 +534,10 @@ def determine_waf(directory):
     ## Open httpx_results file and injest data
     ### Check if httpx_results.txt file exists
     if not os.path.exists(directory + "/httpx_results.txt"):
-        cprint("\nFailed finding WAFs located in front of the found web assets with wafw00f!\n", 'red')
-        cprint("\nThe file: " + directory + "/httpx_results.txt" + " cannot be found!\n", 'red')
+        print("- Failed finding WAFs located in front of the found web assets with wafw00f!")
+        print("- The file: ", end='')
+        cprint(directory + "/httpx_results.txt",'red')
+        print(" cannot be found!")
     else:
         with open(directory + "/httpx_results.txt", "r") as fp:
             urls = fp.read().splitlines()
@@ -548,12 +545,11 @@ def determine_waf(directory):
         counter = len(urls)
 
         ## Loop through urls & multithread
-        with alive_progress.alive_bar(counter, ctrl_c=True, title=f'wafw00f progress') as bar:
-            with concurrent.futures.ThreadPoolExecutor(max_workers=10) as executor:
-                future_f = {executor.submit(determine_waf_worker, url): url for url in urls}
-                
-                for future in concurrent.futures.as_completed(future_f):
-                    bar()
+        with concurrent.futures.ThreadPoolExecutor(max_workers=10) as executor:
+            future_f = {executor.submit(determine_waf_worker, url): url for url in urls}
+            
+            for future in concurrent.futures.as_completed(future_f):
+                pass
 
         ## Output result to file
         with open(directory + "/waf_results.json","w") as fp:
@@ -570,9 +566,12 @@ def nuclei_f(directory, domain_list_file = "/domain_list.txt"):
     dir_path = directory + "/Nuclei"
     try:
         os.mkdir(dir_path)
-        cprint("Creation of " + dir_path + "/ directory", 'blue')
+        print("- Creation of ", end='')
+        cprint(dir_path + "/ directory\n", 'blue')
     except FileExistsError:
-        cprint("Directory " + dir_path + "/ already exists", 'blue')
+        print("- Directory ", end='')
+        cprint(dir_path + "/",'blue')
+        print(" already exists", 'blue')
     except:
         raise
     
@@ -652,7 +651,8 @@ def webanalyzer_worker(directory, domain):
         if web_port:
             os.system(webanalyze_path + " -host " + domain + " -output json -silent -search false -redirect 2>/dev/null | jq > " + directory + "/Webanalyzer/" + domain + ".json 2>/dev/null")
     except:
-        cprint("\tError running Webanalyzer for " + domain + "\n", 'red')
+        print("- Error running Webanalyzer for ", end='')
+        cprint(domain + "\n", 'red')
 
 
 
@@ -664,9 +664,13 @@ def webanalyzer_f(directory, found_domains):
     ## Create output directories
     try:
         os.mkdir(directory + "/Webanalyzer")
-        cprint("Creation of " + directory + "/Webanalyzer/ directory", 'blue')
+        print("- Creation of ", end='')
+        cprint(directory + "/Webanalyzer/", 'blue')
+        print("directory")
     except FileExistsError:
-        cprint("Directory " + directory + "/Webanalyzer/ already exists", 'blue')
+        print("- Directory ", end='')
+        cprint(directory + "/Webanalyzer/", 'blue')
+        print("already exists")
     except:
         raise
 
@@ -679,12 +683,11 @@ def webanalyzer_f(directory, found_domains):
     counter = len(found_domains)
 
     ## Loop through found domains & multithread
-    with alive_progress.alive_bar(counter, ctrl_c=True, title=f'Webanalyze progress') as bar:
-        with concurrent.futures.ThreadPoolExecutor(max_workers=40) as executor:
-            future_f = {executor.submit(webanalyzer_worker, directory, domain): domain for domain in found_domains}
-            
-            for future in concurrent.futures.as_completed(future_f):
-                bar()
+    with concurrent.futures.ThreadPoolExecutor(max_workers=40) as executor:
+        future_f = {executor.submit(webanalyzer_worker, directory, domain): domain for domain in found_domains}
+        
+        for future in concurrent.futures.as_completed(future_f):
+            pass
 
     ## Remove empty files
     for (dirpath, folder_names, files) in os.walk(directory + "/Webanalyzer/"):
@@ -716,7 +719,8 @@ def webanalyzer_f(directory, found_domains):
                         else:
                             technologies[techs]['hostname_versions'][filename_domain] = "NaN"
                     except:
-                        cprint("\tError running webanalyzer for: " + filename_domain + "\n", 'red')
+                        print("- Error running webanalyzer for: ", end='')
+                        cprint(filename_domain + "\n", 'red')
 
     ## Write technologies statistics to file
     with open(directory + "/technologies_statistics.json", "w") as fp:
@@ -738,7 +742,7 @@ def gau_f(directory, domain_list_file = "/domain_list.txt"):
         else:
             os.system("cat " + domain_list_file + " | " + gau_path + " --o " + directory + "/gau_url_findings.txt --providers wayback,commoncrawl,otx")
     except:
-        cprint("\t Error running gau tool on found web assets\n", 'red')
+        print("- Error running gau tool on found web assets")
 
 
 
