@@ -207,7 +207,7 @@ def domains_discovery(directory, hosts, subfinder_provider_configuration_file):
     found_domains = first_domain_scan(directory, hosts, subfinder_provider_configuration_file)
 
     ## Remove wildcard domains
-    cprint("Running wildcard DNS cleaning function\n", 'red')
+    cprint("\nRunning wildcard DNS cleaning function\n", 'red')
     cleaned_domains = dns_resolver(found_domains)
 
     ## httpx - project discovery
@@ -329,7 +329,8 @@ def whois(directory,ip_list,ip_dict):
             output, error = process.communicate()
             whois_list.append(output.decode().lower())
         except:
-            cprint("Error: Failed to whois the following IP address : " + ip + "\n", 'red')
+            print("- Error: Failed to whois the following IP address: ", end='')
+            cprint(ip + "\n", 'red')
 
     ## Sort - Uniq on the retreived whois_list
     whois_list = sorted(set(whois_list))
@@ -356,7 +357,8 @@ def whois(directory,ip_list,ip_dict):
             filename = cidr.replace("/","_").strip() + ".txt"
             cnt += 1
         except:
-            cprint("Cidrize failed for: " + filename + "\n", "red")
+            print("- Cidrize failed for: ", end='')
+            cprint(filename + "\n", "red")
             continue
 
         ### Write to file
@@ -536,7 +538,7 @@ def determine_waf(directory):
     if not os.path.exists(directory + "/httpx_results.txt"):
         print("- Failed finding WAFs located in front of the found web assets with wafw00f!")
         print("- The file: ", end='')
-        cprint(directory + "/httpx_results.txt",'red')
+        cprint(directory + "/httpx_results.txt", 'red', end='')
         print(" cannot be found!")
     else:
         with open(directory + "/httpx_results.txt", "r") as fp:
@@ -570,8 +572,8 @@ def nuclei_f(directory, domain_list_file = "/domain_list.txt"):
         cprint(dir_path + "/ directory\n", 'blue')
     except FileExistsError:
         print("- Directory ", end='')
-        cprint(dir_path + "/",'blue')
-        print(" already exists", 'blue')
+        cprint(dir_path + "/", 'blue', end='')
+        print(" already exists")
     except:
         raise
     
@@ -659,17 +661,17 @@ def webanalyzer_worker(directory, domain):
 #-------Webanalyzer Function Launch------#
 def webanalyzer_f(directory, found_domains):
     ## Print to console
-    cprint("Finding used technologies by the found web assets with Webanalyzer:\n", 'red')
+    cprint("Finding used technologies by the found web assets with Webanalyzer:", 'red')
 
     ## Create output directories
     try:
         os.mkdir(directory + "/Webanalyzer")
         print("- Creation of ", end='')
-        cprint(directory + "/Webanalyzer/", 'blue')
+        cprint(directory + "/Webanalyzer/", 'blue', end='')
         print("directory")
     except FileExistsError:
         print("- Directory ", end='')
-        cprint(directory + "/Webanalyzer/", 'blue')
+        cprint(directory + "/Webanalyzer/", 'blue', end='')
         print("already exists")
     except:
         raise
@@ -731,7 +733,7 @@ def webanalyzer_f(directory, found_domains):
 #--------------Gau Function-------------#
 def gau_f(directory, domain_list_file = "/domain_list.txt"):
     ## Print to console
-    cprint("Finding interresting URLs based on found web assets\n", 'red')
+    cprint("\nFinding interresting URLs based on found web assets\n", 'red')
 
     ## Launch Gau Tool
     try:
