@@ -358,7 +358,7 @@ def nuclei_f(directory, domains):
     process = subprocess.Popen(bashCommand.split(), stdout=subprocess.PIPE)
     output, error = process.communicate()
 
-    ## Extract interresting findings
+    ## Extract interesting findings
     with open(dir_path + "/nuclei_all_findings.txt", "r") as f_read:
         with open(dir_path + "/nuclei_important_findings.txt", "w") as f_write:
             ### Variable initialization
