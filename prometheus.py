@@ -37,7 +37,7 @@ options:
   -n, --nuclei          Use Nuclei scanner to scan found assets
   -s, --screenshot      Use EyeWitness to take screenshots of found web assets
   -w, --webanalyzer     Use Webanalyzer to list used web technologies
-  -g, --gau             Use gau tool to find interresting URLs on found web assets
+  -g, --gau             Use gau tool to find interesting URLs on found web assets
   -i, --wafwoof         Use wafw00f to determine the WAF technology protecting the found web assets
   -pc PROVIDER_CONFIGURATION_SUBFINDER, --provider_configuration_subfinder PROVIDER_CONFIGURATION_SUBFINDER
                         Specify a subfinder configuration file to pass API keys for various providers
