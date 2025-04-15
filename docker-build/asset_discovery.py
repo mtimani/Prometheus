@@ -55,7 +55,7 @@ options:
   -n, --nuclei          Use Nuclei scanner to scan found assets
   -s, --screenshot      Use EyeWitness to take screenshots of found web assets
   -w, --webanalyzer     Use Webanalyzer to list used web technologies
-  -g, --gau             Use gau tool to find interresting URLs on found web assets
+  -g, --gau             Use gau tool to find interesting URLs on found web assets
   -i, --wafwoof         Use wafw00f to determine the WAF technology protecting the found web assets
   -pc PROVIDER_CONFIGURATION_SUBFINDER, --provider_configuration_subfinder PROVIDER_CONFIGURATION_SUBFINDER
                         Specify a subfinder configuration file to pass API keys for various providers
@@ -587,7 +587,7 @@ def nuclei_f(directory, domain_list_file = "/domain_list.txt"):
     process = subprocess.Popen(bashCommand.split(), stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     output, error = process.communicate()
 
-    ## Extract interresting findings
+    ## Extract interesting findings
     with open(dir_path + "/nuclei_all_findings.txt", "r") as f_read:
         with open(dir_path + "/nuclei_important_findings.json", "w") as f_write:
             ### Variable initialization
@@ -733,7 +733,7 @@ def webanalyzer_f(directory, found_domains):
 #--------------Gau Function-------------#
 def gau_f(directory, domain_list_file = "/domain_list.txt"):
     ## Print to console
-    cprint("\nFinding interresting URLs based on found web assets\n", 'red')
+    cprint("\nFinding interesting URLs based on found web assets\n", 'red')
 
     ## Launch Gau Tool
     try:
@@ -760,7 +760,7 @@ def parse_command_line():
     parser.add_argument("-n", "--nuclei", dest='n', action='store_true', help="Use Nuclei scanner to scan found assets")
     parser.add_argument("-s", "--screenshot", dest='s', action='store_true', help="Use EyeWitness to take screenshots of found web assets")
     parser.add_argument("-w", "--webanalyzer", dest='w', action='store_true', help="Use Webanalyzer to list used web technologies")
-    parser.add_argument("-g", "--gau", dest='g', action='store_true', help="Use gau tool to find interresting URLs on found web assets")
+    parser.add_argument("-g", "--gau", dest='g', action='store_true', help="Use gau tool to find interesting URLs on found web assets")
     parser.add_argument("-i", "--wafwoof", dest='i', action='store_true', help="Use wafw00f to determine the WAF technology protecting the found web assets")
     parser.add_argument("-pc", "--provider_configuration_subfinder", dest="provider_configuration_subfinder", help="Specify a subfinder configuration file to pass API keys for various providers")
     required.add_argument("-d", "--directory", dest="directory", help="Directory that will store results", required=True)
@@ -865,10 +865,10 @@ def main(args):
         print("- Perform Web Technologies enumeration => ", end='')
         cprint("NO", "red")
     if (do_gau):
-        print("- Perform GAU interresting URLs enumeration => ", end='')
+        print("- Perform GAU interesting URLs enumeration => ", end='')
         cprint("YES", "green")
     else:
-        print("- Perform GAU interresting URLs enumeration => ", end='')
+        print("- Perform GAU interesting URLs enumeration => ", end='')
         cprint("NO", "red")
     if (do_screenshots):
         print("- Capture Screenshots on found subdomains => ", end='')
