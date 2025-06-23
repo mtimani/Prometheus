@@ -81,19 +81,20 @@ def exit_abnormal():
 
 
 #----------DNS resolution worker----------#
-def dns_worker_f(hostnames):
-    for host in hostnames:
+def dns_worker_f(subdomains_with_source_chunk, to_remove):
+    for entry in subdomains_with_source_chunk:
+        host = entry["subdomain"]
         try:
             a = socket.gethostbyname("d5a0a55b307ac269a9333a6d6da1bc108b50581a." + host)
-            if (a != ""):
+            if a != "":
                 to_remove.append(host)
-        except Exception as e:
+        except Exception:
             continue
 
 
 
 #-------DNS multithreaded resolution------#
-def dns_resolver(hostnames):
+def dns_resolver(domains_with_source):
     ## Variable initialization
     global to_remove 
     to_remove = []
@@ -101,22 +102,26 @@ def dns_resolver(hostnames):
     ## Threading initialization
     threads = list()
     chunksize = 100
-    chunks = [hostnames[i:i + chunksize] for i in range(0, len(hostnames), chunksize)]
+    chunks = [domains_with_source[i:i + chunksize] for i in range(0, len(domains_with_source), chunksize)]
     for chunk in chunks:
-        x = threading.Thread(target=dns_worker_f, args=(chunk,))
+        x = threading.Thread(target=dns_worker_f, args=(chunk, to_remove))
         threads.append(x)
         x.start()
     for chunk, thread in enumerate(threads):
         thread.join()
 
-    hostnames = [x for x in hostnames if x not in to_remove]
+    ## Filter the list to keep only domains that passed the DNS check
+    cleaned_domains_with_source = [entry for entry in domains_with_source if entry["subdomain"] not in to_remove]
 
-    return(hostnames)
+    ## Extract flat list of domains
+    cleaned_domains = [entry["subdomain"] for entry in cleaned_domains_with_source]
+
+    return cleaned_domains, cleaned_domains_with_source
 
 
 
 #---------Multithreading Function---------#
-def worker_f(directory, root_domain, found_domains, subfinder_provider_configuration_file):
+def worker_f(directory, root_domain, found_domains, found_domains_with_source, subfinder_provider_configuration_file):
     ## Subfinder
     if (subfinder_provider_configuration_file != "None"):
         bashCommand = "subfinder -silent -d " + root_domain + " -pc " + subfinder_provider_configuration_file
@@ -127,6 +132,10 @@ def worker_f(directory, root_domain, found_domains, subfinder_provider_configura
     output, error = process.communicate()
     for i in output.decode().splitlines():
         found_domains.append(i)
+        found_domains_with_source.append({
+            "subdomain": i,
+            "source": "subfinder"
+        })
         
     ## Findomain
     bashCommand = findomain_path + " -q -t " + root_domain
@@ -135,6 +144,10 @@ def worker_f(directory, root_domain, found_domains, subfinder_provider_configura
     for i in output.decode().splitlines():
         if i != "":
             found_domains.append(i)
+            found_domains_with_source.append({
+                "subdomain": i,
+                "source": "findomain"
+            })
     
     ## Aiodnsbrute
     bashCommand = "aiodnsbrute -w " + dns_bruteforce_wordlist_path + " -t 1024 " + root_domain
@@ -145,7 +158,12 @@ def worker_f(directory, root_domain, found_domains, subfinder_provider_configura
     substring = '[+]'
     temp = [item for item in out if substring.lower() in item.lower()]
     for i in temp:
-        found_domains.append(i.split('[0m',1)[1].split('\t',1)[0].strip())
+        subdomain = i.split('[0m',1)[1].split('\t',1)[0].strip()
+        found_domains.append(subdomain)
+        found_domains_with_source.append({
+            "subdomain": subdomain,
+            "source": "aiodnsbrute"
+        })
 
 
 
@@ -154,9 +172,17 @@ def first_domain_scan(directory, hosts, subfinder_provider_configuration_file):
     ## Root and found domains list initialization
     root_domains  = hosts.copy()
     found_domains = hosts.copy()
+    found_domains_with_source = []
 
     ## Print to console
     cprint("\nFinding subdomains for specified root domains:", 'red')
+
+    ## Populate found_domains_with_source
+    for subdomain in found_domains:
+        found_domains_with_source.append({
+            "subdomain": subdomain,
+            "source": "root_domain"
+        })
 
     for domain in root_domains:
         print('- ' + domain)
@@ -165,15 +191,16 @@ def first_domain_scan(directory, hosts, subfinder_provider_configuration_file):
 
     ## Loop over root domains
     with concurrent.futures.ThreadPoolExecutor(max_workers=50) as executor:
-        future_f = {executor.submit(worker_f, directory, root_domain, found_domains, subfinder_provider_configuration_file): root_domain for root_domain in root_domains}
+        future_f = {executor.submit(worker_f, directory, root_domain, found_domains, found_domains_with_source, subfinder_provider_configuration_file): root_domain for root_domain in root_domains}
         
         for future in concurrent.futures.as_completed(future_f):
             pass
     
     ## Sort - Uniq Found domains list
     found_domains = sorted(set(found_domains))
+    found_domains_with_source = sorted(found_domains_with_source, key=lambda x: x["subdomain"])
 
-    return found_domains.copy()
+    return found_domains.copy(), found_domains_with_source.copy()
 
 
 
@@ -204,11 +231,11 @@ def httpx_f(directory, subdomain_list_file):
 #--------Domains Discovery Function-------#
 def domains_discovery(directory, hosts, subfinder_provider_configuration_file):
     ## First domain scan function call
-    found_domains = first_domain_scan(directory, hosts, subfinder_provider_configuration_file)
+    found_domains, found_domains_with_source  = first_domain_scan(directory, hosts, subfinder_provider_configuration_file)
 
     ## Remove wildcard domains
     cprint("\nRunning wildcard DNS cleaning function\n", 'red')
-    cleaned_domains = dns_resolver(found_domains)
+    cleaned_domains, cleaned_domains_with_source = dns_resolver(found_domains_with_source)
 
     ## httpx - project discovery
     cprint("Running httpx\n", 'red')
@@ -240,6 +267,7 @@ def domains_discovery(directory, hosts, subfinder_provider_configuration_file):
     cprint("Running SANextract\n", 'red')
 
     temp = []
+    temp_with_source = []
     for i in urls:
         bashCommand_1 = "echo " + i
         bashCommand_2 = SANextract_path + " -timeout 1s"
@@ -249,33 +277,43 @@ def domains_discovery(directory, hosts, subfinder_provider_configuration_file):
             if len(j) != 0:
                 if j[0] != '*':
                     temp.append(j)
+                    temp_with_source.append({
+                        "subdomain": j,
+                        "source": "SANextract"
+                    })
 
     ## Remove wildcard domains (again)
     cprint("Running wildcard DNS cleaning function\n", 'red')
-    cleaned_temp = dns_resolver(temp)
+    cleaned_temp, cleaned_temp_with_source = dns_resolver(temp_with_source)
     cleaned_domains.extend(cleaned_temp)
+    cleaned_domains_with_source.extend(cleaned_temp_with_source)
     cleaned_domains = sorted(set(cleaned_domains))
+    cleaned_domains_with_source = sorted(cleaned_domains_with_source, key=lambda x: x["subdomain"])
 
     ## Write found domains to a file
     with open(directory+"/domain_list.txt","w") as fp:
         for item in cleaned_domains:
             fp.write("%s\n" % item)
 
-    return cleaned_domains
+    return cleaned_domains, cleaned_domains_with_source
 
 
 
 #---------IP Discovery Function---------#
-def IP_discovery(directory, found_domains):
+def IP_discovery(directory, found_domains, found_domains_with_source):
     ## Print to console
     cprint("Finding IPs for found subdomains\n",'red')
 
     ## Variables initialization
     ip_dict = {}
+    ip_dict_with_source = {}
     ip_list = []
     keys = range(len(found_domains))
 
     counter = len(found_domains)
+
+    ## Build a quick mapping: domain -> source
+    source_map = {entry["subdomain"]: entry["source"] for entry in found_domains_with_source}
 
     ## IP addresses lookup
     for domain in found_domains:
@@ -287,6 +325,11 @@ def IP_discovery(directory, found_domains):
                 ip_list.append(result[-1][0])
             IPs = sorted(set(IPs))
             ip_dict[domain] = IPs.copy()
+
+            ip_dict_with_source[domain] = {
+                "source": source_map.get(domain, "unknown"),
+                "ips": IPs.copy()
+            }
         except:
             None
     
@@ -298,12 +341,12 @@ def IP_discovery(directory, found_domains):
         for item in ip_list:
             fp.write("%s\n" % item)
 
-    return (ip_list,ip_dict)
+    return (ip_list,ip_dict, ip_dict_with_source)
 
 
 
 #-------------Whois Function------------#
-def whois(directory,ip_list,ip_dict):
+def whois(directory,ip_list,ip_dict,ip_dict_with_source):
     ## Print to console
     cprint("Whois magic\n",'red')
 
@@ -390,15 +433,15 @@ def whois(directory,ip_list,ip_dict):
         whois_dict[cidr]['Percentage'] = percentage
 
     ## Append IP Network Owner
-    for dict1_key in ip_dict.keys():
-        ip = ip_dict[dict1_key][0]
-        for dict2_key in whois_dict.keys():
-            if ipaddress.ip_address(ip) in ipaddress.ip_network(str(dict2_key)):
-                ip_dict[dict1_key].append(dict2_key)
-                ip_dict[dict1_key].append(whois_dict[dict2_key])
+    for domain in ip_dict_with_source.keys():
+        ip = ip_dict_with_source[domain]["ips"][0]  # First IP
+        for cidr in whois_dict.keys():
+            if ipaddress.ip_address(ip) in ipaddress.ip_network(str(cidr)):
+                ip_dict_with_source[domain]["CIDR"] = cidr
+                ip_dict_with_source[domain]["Owner_Info"] = whois_dict[cidr]
     ### Write Domains and corresponding IPs to a json file
     with open(directory+"/domain_and_IP_list.json","w") as fp:
-        fp.write(json.dumps(ip_dict, sort_keys=True, indent=4))
+        fp.write(json.dumps(ip_dict_with_source, sort_keys=True, indent=4))
  
     ## Write whois dictionnary to file
     with open(directory+"/IP_ranges_and_owners.txt","w") as fp:
@@ -412,9 +455,9 @@ def whois(directory,ip_list,ip_dict):
     ### Variable initialization
     subdomain_stats = {}
 
-    ### Recover root domains
-    for key in ip_dict.keys():
-        root_domain = tldextract.extract(key).registered_domain
+    ### Recover root domains 
+    for domain in ip_dict_with_source.keys():
+        root_domain = tldextract.extract(domain).top_domain_under_public_suffix
         if root_domain in subdomain_stats:
             subdomain_stats[root_domain] += 1
         else:
@@ -886,9 +929,9 @@ def main(args):
     ## Domains discovery function call in the case subdomains are not provided and only root domains are provided
     if (not subdomains):
         if (provider_configuration_subfinder != None):
-            found_domains = domains_discovery(directory, hosts, subfinder_provider_configuration_file)
+            found_domains, found_domains_with_source = domains_discovery(directory, hosts, subfinder_provider_configuration_file)
         else:
-            found_domains = domains_discovery(directory, hosts, "None")
+            found_domains, found_domains_with_source = domains_discovery(directory, hosts, "None")
 
     ## Httpx Function call (that runs httpx on the provided subdomains) if subdomain option is selected
     if (subdomains):
@@ -898,13 +941,19 @@ def main(args):
     ## IP discovery function call
     ### If root domain list is provided
     if (not subdomains):
-        ip_list, ip_dict = IP_discovery(directory, found_domains)
+        ip_list, ip_dict, ip_dict_with_source = IP_discovery(directory, found_domains, found_domains_with_source)
     ### If subdomain list is provided
     else:
-        ip_list, ip_dict = IP_discovery(directory, subdomains)
+        subdomains_with_source = []
+        for subdomain in subdomains:
+            subdomains_with_source.append({
+                "subdomain": subdomain,
+                "source": "manual"
+            })
+        ip_list, ip_dict, ip_dict_with_source = IP_discovery(directory, subdomains, subdomains_with_source)
 
     ## Whois function call
-    whois(directory, ip_list, ip_dict)
+    whois(directory, ip_list, ip_dict, ip_dict_with_source)
 
     ## Statistics normalization function call
     owner_percentage_normalization_f(directory)
