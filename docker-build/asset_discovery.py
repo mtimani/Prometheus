@@ -47,7 +47,7 @@ WAFS                            = {"assets_number":0, "results":{}}
 def usage():
     print(
 '''
-usage: asset_discovery.py [-h] [-n] [-s] [-w] [-g] [-i] [-pc PROVIDER_CONFIGURATION_SUBFINDER] -d DIRECTORY
+usage: asset_discovery.py [-h] [-n] [-s] [-w] [-g] [-i] [-pc PROVIDER_CONFIGURATION_SUBFINDER] [-r DNS_RESOLVER_LIST_FILE] -d DIRECTORY
                           (-f HOST_LIST_FILE | -l HOST_LIST [HOST_LIST ...] | -b SUBDOMAIN_LIST_FILE)
 
 options:
@@ -59,6 +59,8 @@ options:
   -i, --wafwoof         Use wafw00f to determine the WAF technology protecting the found web assets
   -pc PROVIDER_CONFIGURATION_SUBFINDER, --provider_configuration_subfinder PROVIDER_CONFIGURATION_SUBFINDER
                         Specify a subfinder configuration file to pass API keys for various providers
+  -r, --dns-resolver-list DNS_RESOLVER_LIST_FILE
+                        Specify a DNS resolver list file that will be used for DNS bruteforcing
 
 required arguments:
   -d DIRECTORY, --directory DIRECTORY
@@ -121,7 +123,7 @@ def dns_resolver(domains_with_source):
 
 
 #---------Multithreading Function---------#
-def worker_f(directory, root_domain, found_domains, found_domains_with_source, subfinder_provider_configuration_file):
+def worker_f(directory, root_domain, found_domains, found_domains_with_source, subfinder_provider_configuration_file, aiodnsbrute_dns_resolver_list_file):
     ## Subfinder
     if (subfinder_provider_configuration_file != "None"):
         bashCommand = "subfinder -silent -d " + root_domain + " -pc " + subfinder_provider_configuration_file
@@ -150,7 +152,10 @@ def worker_f(directory, root_domain, found_domains, found_domains_with_source, s
             })
     
     ## Aiodnsbrute
-    bashCommand = "aiodnsbrute -w " + dns_bruteforce_wordlist_path + " -t 1024 " + root_domain
+    if (aiodnsbrute_dns_resolver_list_file != "None"):
+        bashCommand = "aiodnsbrute -w " + dns_bruteforce_wordlist_path + " -t 1024 -r " + aiodnsbrute_dns_resolver_list_file + " " + root_domain
+    else:
+        bashCommand = "aiodnsbrute -w " + dns_bruteforce_wordlist_path + " -t 1024 " + root_domain
     process = subprocess.Popen(bashCommand.split(), stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     output, error = process.communicate()
     ### Found subdomains extraction
@@ -168,7 +173,7 @@ def worker_f(directory, root_domain, found_domains, found_domains_with_source, s
 
 
 #--------Domains Discovery Function-------#
-def first_domain_scan(directory, hosts, subfinder_provider_configuration_file):
+def first_domain_scan(directory, hosts, subfinder_provider_configuration_file, aiodnsbrute_dns_resolver_list_file):
     ## Root and found domains list initialization
     root_domains  = hosts.copy()
     found_domains = hosts.copy()
@@ -191,7 +196,7 @@ def first_domain_scan(directory, hosts, subfinder_provider_configuration_file):
 
     ## Loop over root domains
     with concurrent.futures.ThreadPoolExecutor(max_workers=50) as executor:
-        future_f = {executor.submit(worker_f, directory, root_domain, found_domains, found_domains_with_source, subfinder_provider_configuration_file): root_domain for root_domain in root_domains}
+        future_f = {executor.submit(worker_f, directory, root_domain, found_domains, found_domains_with_source, subfinder_provider_configuration_file, aiodnsbrute_dns_resolver_list_file): root_domain for root_domain in root_domains}
         
         for future in concurrent.futures.as_completed(future_f):
             pass
@@ -229,9 +234,9 @@ def httpx_f(directory, subdomain_list_file):
 
 
 #--------Domains Discovery Function-------#
-def domains_discovery(directory, hosts, subfinder_provider_configuration_file):
+def domains_discovery(directory, hosts, subfinder_provider_configuration_file, aiodnsbrute_dns_resolver_list_file):
     ## First domain scan function call
-    found_domains, found_domains_with_source  = first_domain_scan(directory, hosts, subfinder_provider_configuration_file)
+    found_domains, found_domains_with_source  = first_domain_scan(directory, hosts, subfinder_provider_configuration_file, aiodnsbrute_dns_resolver_list_file)
 
     ## Remove wildcard domains
     cprint("\nRunning wildcard DNS cleaning function\n", 'red')
@@ -533,11 +538,21 @@ def determine_waf_worker(url):
     ## Variable declaration
     global WAFS
 
+    ## Initialize default waf
+    waf = "Unknown"
+
     ## Wafw00f scan launch
     try:
         bashCommand = "wafw00f " + url
         process = subprocess.Popen(bashCommand.split(), stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-        output, error = process.communicate()
+        
+        try:
+            output, error = process.communicate(timeout=30)
+        except subprocess.TimeoutExpired:
+            process.kill()
+            output, error = process.communicate()
+            # record a timeout as a distinct result
+            waf = "Timeout"
 
         ### Bash color removal 
         ansi_escape = re.compile(r'\x1B(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~])')
@@ -806,6 +821,7 @@ def parse_command_line():
     parser.add_argument("-g", "--gau", dest='g', action='store_true', help="Use gau tool to find interesting URLs on found web assets")
     parser.add_argument("-i", "--wafwoof", dest='i', action='store_true', help="Use wafw00f to determine the WAF technology protecting the found web assets")
     parser.add_argument("-pc", "--provider_configuration_subfinder", dest="provider_configuration_subfinder", help="Specify a subfinder configuration file to pass API keys for various providers")
+    parser.add_argument("-r", "--dns-resolver-list", dest="dns_resolver_list_file", help="Specify a DNS resolver list file that will be used for DNS bruteforcing")
     required.add_argument("-d", "--directory", dest="directory", help="Directory that will store results", required=True)
     content.add_argument("-f", "--filename", dest="host_list_file", help="Filename containing root domains to scan")
     content.add_argument("-l", "--list", dest="host_list", nargs='+', help="List of root domains to scan")
@@ -822,6 +838,7 @@ def main(args):
     host_list_file                      = args.host_list_file
     subdomain_list_file                 = args.subdomain_list_file
     provider_configuration_subfinder    = args.provider_configuration_subfinder
+    dns_resolver_list_file              = args.dns_resolver_list_file
     do_nuclei                           = args.n
     do_screenshots                      = args.s
     do_webanalyzer                      = args.w
@@ -895,6 +912,15 @@ def main(args):
         print("- Subfinder provider configuration file: ", end='')
         cprint("%s" % (subfinder_provider_configuration_file), "green")
 
+    if (dns_resolver_list_file != None):
+        if (not(os.path.exists(dns_resolver_list_file))):
+            cprint("\nError! The specified dns resolver list file: %s does not exist!\n" % (dns_resolver_list_file), 'red')
+            exit_abnormal()
+        aiodnsbrute_dns_resolver_list_file = dns_resolver_list_file
+        # Output to config output
+        print("- DNS resolver list file: ", end='')
+        cprint("%s" % (aiodnsbrute_dns_resolver_list_file), "green")
+
     if (do_wafwoof):
         print("- Perform WAF enumeration => ", end='')
         cprint("YES", "green")        
@@ -928,10 +954,14 @@ def main(args):
 
     ## Domains discovery function call in the case subdomains are not provided and only root domains are provided
     if (not subdomains):
-        if (provider_configuration_subfinder != None):
-            found_domains, found_domains_with_source = domains_discovery(directory, hosts, subfinder_provider_configuration_file)
+        if (provider_configuration_subfinder != None) and (dns_resolver_list_file != None):
+            found_domains, found_domains_with_source = domains_discovery(directory, hosts, subfinder_provider_configuration_file, aiodnsbrute_dns_resolver_list_file)
+        elif (provider_configuration_subfinder != None):
+            found_domains, found_domains_with_source = domains_discovery(directory, hosts, subfinder_provider_configuration_file, "None")
+        elif (dns_resolver_list_file != None):
+            found_domains, found_domains_with_source = domains_discovery(directory, hosts, "None", aiodnsbrute_dns_resolver_list_file)
         else:
-            found_domains, found_domains_with_source = domains_discovery(directory, hosts, "None")
+            found_domains, found_domains_with_source = domains_discovery(directory, hosts, "None", "None")
 
     ## Httpx Function call (that runs httpx on the provided subdomains) if subdomain option is selected
     if (subdomains):
