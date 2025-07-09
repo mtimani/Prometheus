@@ -29,7 +29,7 @@ mutually exclusive arguments:
 def usage_asset_discovery():
     print(
 '''
-usage: prometheus.py asset_discovery [-h] [-n] [-s] [-w] [-g] [-i] [-pc PROVIDER_CONFIGURATION_SUBFINDER] -d DIRECTORY
+usage: prometheus.py asset_discovery [-h] [-n] [-s] [-w] [-g] [-i] [-pc PROVIDER_CONFIGURATION_SUBFINDER] [-r DNS_RESOLVER_LIST_FILE] -d DIRECTORY
                           (-f HOST_LIST_FILE | -l HOST_LIST [HOST_LIST ...] | -b SUBDOMAIN_LIST_FILE)
 
 options:
@@ -41,6 +41,8 @@ options:
   -i, --wafwoof         Use wafw00f to determine the WAF technology protecting the found web assets
   -pc PROVIDER_CONFIGURATION_SUBFINDER, --provider_configuration_subfinder PROVIDER_CONFIGURATION_SUBFINDER
                         Specify a subfinder configuration file to pass API keys for various providers
+  -r, --dns-resolver-list DNS_RESOLVER_LIST_FILE
+                        Specify a DNS resolver list file that will be used for DNS bruteforcing
 
 required arguments:
   -d DIRECTORY, --directory DIRECTORY
@@ -260,6 +262,39 @@ def filter_params(command, function):
             to_add = " -v " + file_path + ":/data/" + file_name
             final_command = insert_after_target(final_command, "-t --rm", to_add)
     
+    ## If the subdomain file parameter is specified
+    if ("-r" in final_command) or ("--dns-resolver-list" in final_command):
+        ### Variant of option specified (Extract values of -r or --dns-resolver-list parameters)
+        match = re.search(r'(-r|--dns-resolver-list)\s+(\S+)', final_command)
+        
+        ### If the value extraction was successful, modify the command
+        if match:
+            file_path = match.group(2)
+            file_name = file_path.split('/')[-1]
+
+            #### Check if subdomain list file exists
+            if (not(os.path.exists(file_path))):
+                print("\nError! The specified DNS resolver file: %s does not exist!\n" % (file_path))
+                exit_abnormal(function)
+
+            #### Replace old file name by location in docker
+            if (final_command.endswith(file_path)):
+                str_to_replace = file_path
+                str_replacing  = "/data/" + file_name
+                final_command = replace_last_occurrence(final_command, str_to_replace, str_replacing)
+            else:
+                str_to_replace = file_path + " "
+                str_replacing  = "/data/" + file_name + " "
+                final_command = final_command.replace(str_to_replace, str_replacing, 1)
+
+            #### Add ./ if no slashes in path
+            if not('/' in file_path):
+                file_path = "./" + file_path
+
+            #### Add shared volume for subdomain list file
+            to_add = " -v " + file_path + ":/data/" + file_name
+            final_command = insert_after_target(final_command, "-t --rm", to_add)
+
     return final_command
 
 
