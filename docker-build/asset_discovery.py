@@ -295,9 +295,22 @@ def domains_discovery(directory, hosts, subfinder_provider_configuration_file, a
     cleaned_domains = sorted(set(cleaned_domains))
     cleaned_domains_with_source = sorted(cleaned_domains_with_source, key=lambda x: x["subdomain"])
 
+    ## Create a list of entries that are not ending with one of the root domains
+    cleaned_domains_without_false_positives = []
+
+    for entry in cleaned_domains_with_source:
+        domain = entry["subdomain"]
+        if any(domain == root or domain.endswith("." + root) for root in hosts):
+            cleaned_domains_without_false_positives.append(domain)
+
     ## Write found domains to a file
     with open(directory+"/domain_list.txt","w") as fp:
         for item in cleaned_domains:
+            fp.write("%s\n" % item)
+
+    ## Write found domains without false positives to a file
+    with open(directory+"/domain_list_without_false_positives.txt","w") as fp:
+        for item in cleaned_domains_without_false_positives:
             fp.write("%s\n" % item)
 
     return cleaned_domains, cleaned_domains_with_source
