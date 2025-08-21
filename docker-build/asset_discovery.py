@@ -684,10 +684,10 @@ def screenshot_f(directory, domain_list_file = "/domain_list.txt"):
     ## EyeWitness tool launch
     ### If root domain list is provided
     if (domain_list_file == "/domain_list.txt"):
-        os.system(eyewitness_path + " --timeout 10 --prepend-https --delay 5 -d " + directory + "/Screenshots -f " + directory + "/domain_list.txt --no-clear --no-prompt --max-retries 1 --user-agent 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36'")
+        os.system(eyewitness_path + " --timeout 10 --prepend-https --delay 5 -d " + directory + "/Screenshots -f " + directory + "/domain_list.txt --no-clear --no-prompt --user-agent 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36'")
     ### If subdomain list is provided
     else:
-        os.system(eyewitness_path + " --timeout 10 --prepend-https --delay 5 -d " + directory + "/Screenshots -f " + domain_list_file + " --no-clear --no-prompt --max-retries 1 --user-agent 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36'")
+        os.system(eyewitness_path + " --timeout 10 --prepend-https --delay 5 -d " + directory + "/Screenshots -f " + domain_list_file + " --no-clear --no-prompt --user-agent 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36'")
 
 
 
