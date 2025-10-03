@@ -303,6 +303,9 @@ def domains_discovery(directory, hosts, subfinder_provider_configuration_file, a
         if any(domain == root or domain.endswith("." + root) for root in hosts):
             cleaned_domains_without_false_positives.append(domain)
 
+    # Sort and remove duplicates from the list
+    cleaned_domains_without_false_positives = sorted(set(cleaned_domains_without_false_positives))
+
     ## Write found domains to a file
     with open(directory+"/domain_list.txt","w") as fp:
         for item in cleaned_domains:
