@@ -18,6 +18,7 @@ import concurrent.futures
 import ipaddress
 import operator
 from cidrize import cidrize
+from report_generator import generate_report
 
 
 
@@ -813,10 +814,10 @@ def gau_f(directory, domain_list_file = "/domain_list.txt"):
     try:
         ### If root domain list is provided
         if (domain_list_file == "/domain_list.txt"):
-            os.system("cat " + directory + "/domain_list.txt | " + gau_path + " --o " + directory + "/gau_url_findings.txt --providers wayback,commoncrawl,otx")
+            os.system("cat " + directory + "/domain_list.txt | " + gau_path + " --threads 5 --o " + directory + "/gau_url_findings.txt --providers wayback,commoncrawl,otx")
         ### If subdomain list is provided
         else:
-            os.system("cat " + domain_list_file + " | " + gau_path + " --o " + directory + "/gau_url_findings.txt --providers wayback,commoncrawl,otx")
+            os.system("cat " + domain_list_file + " | " + gau_path + " --threads 5 --o " + directory + "/gau_url_findings.txt --providers wayback,commoncrawl,otx")
     except:
         print("- Error running gau tool on found web assets")
 
@@ -1043,6 +1044,14 @@ def main(args):
         ### If subdomain list is provided
         else:
             nuclei_f(directory, subdomain_list_file)
+
+    ## Generate Static HTML Report
+    cprint("\nGenerating static HTML report...", 'blue')
+    try:
+        generate_report(directory)
+        cprint("Report generated successfully!", 'green')
+    except Exception as e:
+        cprint(f"Failed to generate report: {e}", 'red')
 
     cprint("\nAll tests complete, good hacking to you young padawan!",'green')
 
