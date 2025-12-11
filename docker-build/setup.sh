@@ -156,13 +156,13 @@ command -v "eyewitness" >/dev/null 2>&1
             apt-get install python3-pip -y
             current_dir=$(pwd)
             cd /opt/
-            apt-get install -y git python3-pip xvfb libssl-dev libffi-dev libxml2 libxml2-dev libxslt1-dev zlib1g-dev wkhtmltopdf
-            pip3 install --upgrade setuptools --break-system-packages
+            apt-get install -y git python3-pip xvfb libssl-dev libffi-dev libxml2 libxml2-dev libxslt1-dev zlib1g-dev wkhtmltopdf python3-selenium
+            pip3 install --upgrade setuptools rapidfuzz psutil --break-system-packages
             git clone https://github.com/FortyNorthSecurity/EyeWitness.git
-            cd EyeWitness/Python/setup
+            cd EyeWitness/setup
             sed -i -e "s/python3 -m pip install/python3 -m pip install --break-system-packages/g" setup.sh
             bash setup.sh
-            cd ..
+            cd ../Python
             sed -i -e "s@\#\!/usr/bin/env python3@\#\!$(which python3)@" EyeWitness.py
             cd $current_dir
             alias eyewitness='/opt/EyeWitness/Python/EyeWitness.py'
@@ -447,10 +447,10 @@ if [ "$OS" = "Debian" ] || [ "$OS" = "Ubuntu" ] || [ "$OS" = "Exegol" ]; then
         apt-get install python3-pip -y
         current_dir=$(pwd)
         cd /opt/
-        apt-get install -y git python3-pip xvfb libssl-dev libffi-dev libxml2 libxml2-dev libxslt1-dev zlib1g-dev wkhtmltopdf
-        pip3 install --upgrade setuptools --break-system-packages
+        apt-get install -y git python3-pip xvfb libssl-dev libffi-dev libxml2 libxml2-dev libxslt1-dev zlib1g-dev wkhtmltopdf python3-selenium
+        pip3 install --upgrade setuptools rapidfuzz psutil --break-system-packages
         git clone https://github.com/FortyNorthSecurity/EyeWitness.git
-        cd EyeWitness/Python/setup
+        cd EyeWitness/setup
         sed -i -e "s/python3 -m pip install/python3 -m pip install --break-system-packages/g" setup.sh
         ./setup.sh
         cd ..
@@ -471,6 +471,9 @@ chown $(echo "$USER"):$(echo "$USER") /usr/bin/blackbox_audit.py
 mv asset_discovery.py /usr/bin/
 chmod +x /usr/bin/asset_discovery.py
 chown $(echo "$USER"):$(echo "$USER") /usr/bin/asset_discovery.py
+mv report_generator.py /usr/bin/
+chmod +x /usr/bin/report_generator.py
+chown $(echo "$USER"):$(echo "$USER") /usr/bin/report_generator.py
 
 if [ "$OS" = "Exegol" ]; then
     exec zsh

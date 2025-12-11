@@ -154,12 +154,9 @@ def filter_params(command, function):
                 str_replacing  = "/data/" + dir_name + " "
                 final_command = final_command.replace(str_to_replace, str_replacing, 1)
             
-            #### Add ./ if no slashes in path
-            if not('/' in dir_path):
-                dir_path = "./" + dir_path
-
             #### Add shared volume for results directory
-            to_add = " -v " + dir_path + ":/data/" + dir_name
+            abs_path = os.path.abspath(dir_path)
+            to_add = " -v " + abs_path + ":/data/" + dir_name
             final_command = insert_after_target(final_command, "-t --rm", to_add)
         
     ## If the file parameter is specified
@@ -188,12 +185,9 @@ def filter_params(command, function):
                 str_replacing  = "/data/" + file_name + " "
                 final_command = final_command.replace(str_to_replace, str_replacing, 1)
 
-            #### Add ./ if no slashes in path
-            if not('/' in file_path):
-                file_path = "./" + file_path
-
             #### Add shared volume for host list file
-            to_add = " -v " + file_path + ":/data/" + file_name
+            abs_path = os.path.abspath(file_path)
+            to_add = " -v " + abs_path + ":/data/" + file_name
             final_command = insert_after_target(final_command, "-t --rm", to_add)
     
     ## If the subdomain file parameter is specified
@@ -221,12 +215,9 @@ def filter_params(command, function):
                 str_replacing  = "/data/" + file_name + " "
                 final_command = final_command.replace(str_to_replace, str_replacing, 1)
 
-            #### Add ./ if no slashes in path
-            if not('/' in file_path):
-                file_path = "./" + file_path
-
             #### Add shared volume for subdomain list file
-            to_add = " -v " + file_path + ":/data/" + file_name
+            abs_path = os.path.abspath(file_path)
+            to_add = " -v " + abs_path + ":/data/" + file_name
             final_command = insert_after_target(final_command, "-t --rm", to_add)
     
     ## If the subdomain file parameter is specified
@@ -254,12 +245,9 @@ def filter_params(command, function):
                 str_replacing  = "/data/" + file_name + " "
                 final_command = final_command.replace(str_to_replace, str_replacing, 1)
 
-            #### Add ./ if no slashes in path
-            if not('/' in file_path):
-                file_path = "./" + file_path
-
             #### Add shared volume for subdomain list file
-            to_add = " -v " + file_path + ":/data/" + file_name
+            abs_path = os.path.abspath(file_path)
+            to_add = " -v " + abs_path + ":/data/" + file_name
             final_command = insert_after_target(final_command, "-t --rm", to_add)
     
     ## If the subdomain file parameter is specified
@@ -287,12 +275,9 @@ def filter_params(command, function):
                 str_replacing  = "/data/" + file_name + " "
                 final_command = final_command.replace(str_to_replace, str_replacing, 1)
 
-            #### Add ./ if no slashes in path
-            if not('/' in file_path):
-                file_path = "./" + file_path
-
             #### Add shared volume for subdomain list file
-            to_add = " -v " + file_path + ":/data/" + file_name
+            abs_path = os.path.abspath(file_path)
+            to_add = " -v " + abs_path + ":/data/" + file_name
             final_command = insert_after_target(final_command, "-t --rm", to_add)
 
     return final_command
@@ -354,7 +339,7 @@ def main():
 | |_) | '__/ _ \\| '_ ` _ \\ / _ \\ __| '_ \\ / _ \\ | | / __|
 |  __/| | | (_) | | | | | |  __/ |_| | | |  __/ |_| \\__ \\
 |_|   |_|  \\___/|_| |_| |_|\\___|\\__|_| |_|\\___|\\__,_|___/
-                                           Version: 1.0.0
+                                           Version: 1.0.1
                                            Author: mtimani
     """)
 
