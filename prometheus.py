@@ -29,7 +29,7 @@ mutually exclusive arguments:
 def usage_asset_discovery():
     print(
 '''
-usage: prometheus.py asset_discovery [-h] [-n] [-s] [-w] [-g] [-i] [-pc PROVIDER_CONFIGURATION_SUBFINDER] [-r DNS_RESOLVER_LIST_FILE] -d DIRECTORY
+usage: prometheus.py asset_discovery [-h] [-n] [-s] [-w] [-g] [-i] [-S] [-pc PROVIDER_CONFIGURATION_SUBFINDER] [-r DNS_RESOLVER_LIST_FILE] -d DIRECTORY
                           (-f HOST_LIST_FILE | -l HOST_LIST [HOST_LIST ...] | -b SUBDOMAIN_LIST_FILE)
 
 options:
@@ -39,6 +39,7 @@ options:
   -w, --webanalyzer     Use Webanalyzer to list used web technologies
   -g, --gau             Use gau tool to find interesting URLs on found web assets
   -i, --wafwoof         Use wafw00f to determine the WAF technology protecting the found web assets
+  -S, --safe            Limit results to subdomains of the provided root domains
   -pc PROVIDER_CONFIGURATION_SUBFINDER, --provider_configuration_subfinder PROVIDER_CONFIGURATION_SUBFINDER
                         Specify a subfinder configuration file to pass API keys for various providers
   -r, --dns-resolver-list DNS_RESOLVER_LIST_FILE
@@ -339,7 +340,7 @@ def main():
 | |_) | '__/ _ \\| '_ ` _ \\ / _ \\ __| '_ \\ / _ \\ | | / __|
 |  __/| | | (_) | | | | | |  __/ |_| | | |  __/ |_| \\__ \\
 |_|   |_|  \\___/|_| |_| |_|\\___|\\__|_| |_|\\___|\\__,_|___/
-                                           Version: 1.0.1
+                                           Version: 1.0.2
                                            Author: mtimani
     """)
 

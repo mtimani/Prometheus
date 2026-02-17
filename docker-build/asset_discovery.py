@@ -48,7 +48,7 @@ WAFS                            = {"assets_number":0, "results":{}}
 def usage():
     print(
 '''
-usage: asset_discovery.py [-h] [-n] [-s] [-w] [-g] [-i] [-pc PROVIDER_CONFIGURATION_SUBFINDER] [-r DNS_RESOLVER_LIST_FILE] -d DIRECTORY
+usage: asset_discovery.py [-h] [-n] [-s] [-w] [-g] [-i] [-S] [-pc PROVIDER_CONFIGURATION_SUBFINDER] [-r DNS_RESOLVER_LIST_FILE] -d DIRECTORY
                           (-f HOST_LIST_FILE | -l HOST_LIST [HOST_LIST ...] | -b SUBDOMAIN_LIST_FILE)
 
 options:
@@ -58,6 +58,7 @@ options:
   -w, --webanalyzer     Use Webanalyzer to list used web technologies
   -g, --gau             Use gau tool to find interesting URLs on found web assets
   -i, --wafwoof         Use wafw00f to determine the WAF technology protecting the found web assets
+  -S, --safe            Limit results to subdomains of the provided root domains
   -pc PROVIDER_CONFIGURATION_SUBFINDER, --provider_configuration_subfinder PROVIDER_CONFIGURATION_SUBFINDER
                         Specify a subfinder configuration file to pass API keys for various providers
   -r, --dns-resolver-list DNS_RESOLVER_LIST_FILE
@@ -235,7 +236,7 @@ def httpx_f(directory, subdomain_list_file):
 
 
 #--------Domains Discovery Function-------#
-def domains_discovery(directory, hosts, subfinder_provider_configuration_file, aiodnsbrute_dns_resolver_list_file):
+def domains_discovery(directory, hosts, subfinder_provider_configuration_file, aiodnsbrute_dns_resolver_list_file, safe_mode=False):
     ## First domain scan function call
     found_domains, found_domains_with_source  = first_domain_scan(directory, hosts, subfinder_provider_configuration_file, aiodnsbrute_dns_resolver_list_file)
 
@@ -298,25 +299,35 @@ def domains_discovery(directory, hosts, subfinder_provider_configuration_file, a
 
     ## Create a list of entries that are not ending with one of the root domains
     cleaned_domains_without_false_positives = []
+    cleaned_domains_with_source_without_false_positives = [] # New list for source tracking
 
     for entry in cleaned_domains_with_source:
         domain = entry["subdomain"]
         if any(domain == root or domain.endswith("." + root) for root in hosts):
             cleaned_domains_without_false_positives.append(domain)
+            cleaned_domains_with_source_without_false_positives.append(entry)
 
     # Sort and remove duplicates from the list
     cleaned_domains_without_false_positives = sorted(set(cleaned_domains_without_false_positives))
+    cleaned_domains_with_source_without_false_positives = sorted(cleaned_domains_with_source_without_false_positives, key=lambda x: x["subdomain"])
 
     ## Write found domains to a file
     with open(directory+"/domain_list.txt","w") as fp:
-        for item in cleaned_domains:
-            fp.write("%s\n" % item)
+        if safe_mode:
+             for item in cleaned_domains_without_false_positives:
+                fp.write("%s\n" % item)
+        else:
+             for item in cleaned_domains:
+                fp.write("%s\n" % item)
 
     ## Write found domains without false positives to a file
     with open(directory+"/domain_list_without_false_positives.txt","w") as fp:
         for item in cleaned_domains_without_false_positives:
             fp.write("%s\n" % item)
 
+    if safe_mode:
+        return cleaned_domains_without_false_positives, cleaned_domains_with_source_without_false_positives
+    
     return cleaned_domains, cleaned_domains_with_source
 
 
@@ -837,6 +848,7 @@ def parse_command_line():
     parser.add_argument("-w", "--webanalyzer", dest='w', action='store_true', help="Use Webanalyzer to list used web technologies")
     parser.add_argument("-g", "--gau", dest='g', action='store_true', help="Use gau tool to find interesting URLs on found web assets")
     parser.add_argument("-i", "--wafwoof", dest='i', action='store_true', help="Use wafw00f to determine the WAF technology protecting the found web assets")
+    parser.add_argument("-S", "--safe", dest='safe', action='store_true', help="Limit results to subdomains of the provided root domains")
     parser.add_argument("-pc", "--provider_configuration_subfinder", dest="provider_configuration_subfinder", help="Specify a subfinder configuration file to pass API keys for various providers")
     parser.add_argument("-r", "--dns-resolver-list", dest="dns_resolver_list_file", help="Specify a DNS resolver list file that will be used for DNS bruteforcing")
     required.add_argument("-d", "--directory", dest="directory", help="Directory that will store results", required=True)
@@ -861,6 +873,7 @@ def main(args):
     do_webanalyzer                      = args.w
     do_gau                              = args.g
     do_wafwoof                          = args.i
+    do_safe                             = args.safe
 
     ## Display welcome message
     print()
@@ -968,17 +981,24 @@ def main(args):
     else:
         print("- Perform Nuclei Scan => ", end='')
         cprint("NO", "red")
+    
+    if (do_safe):
+        print("- Safe Mode (No False Positives) => ", end='')
+        cprint("YES", "green")
+    else:
+        print("- Safe Mode (No False Positives) => ", end='')
+        cprint("NO", "red")
 
     ## Domains discovery function call in the case subdomains are not provided and only root domains are provided
     if (not subdomains):
         if (provider_configuration_subfinder != None) and (dns_resolver_list_file != None):
-            found_domains, found_domains_with_source = domains_discovery(directory, hosts, subfinder_provider_configuration_file, aiodnsbrute_dns_resolver_list_file)
+            found_domains, found_domains_with_source = domains_discovery(directory, hosts, subfinder_provider_configuration_file, aiodnsbrute_dns_resolver_list_file, do_safe)
         elif (provider_configuration_subfinder != None):
-            found_domains, found_domains_with_source = domains_discovery(directory, hosts, subfinder_provider_configuration_file, "None")
+            found_domains, found_domains_with_source = domains_discovery(directory, hosts, subfinder_provider_configuration_file, "None", do_safe)
         elif (dns_resolver_list_file != None):
-            found_domains, found_domains_with_source = domains_discovery(directory, hosts, "None", aiodnsbrute_dns_resolver_list_file)
+            found_domains, found_domains_with_source = domains_discovery(directory, hosts, "None", aiodnsbrute_dns_resolver_list_file, do_safe)
         else:
-            found_domains, found_domains_with_source = domains_discovery(directory, hosts, "None", "None")
+            found_domains, found_domains_with_source = domains_discovery(directory, hosts, "None", "None", do_safe)
 
     ## Httpx Function call (that runs httpx on the provided subdomains) if subdomain option is selected
     if (subdomains):
