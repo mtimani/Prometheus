@@ -321,9 +321,10 @@ def domains_discovery(directory, hosts, subfinder_provider_configuration_file, a
                 fp.write("%s\n" % item)
 
     ## Write found domains without false positives to a file
-    with open(directory+"/domain_list_without_false_positives.txt","w") as fp:
-        for item in cleaned_domains_without_false_positives:
-            fp.write("%s\n" % item)
+    if not safe_mode:
+        with open(directory+"/domain_list_without_false_positives.txt","w") as fp:
+            for item in cleaned_domains_without_false_positives:
+                fp.write("%s\n" % item)
 
     if safe_mode:
         return cleaned_domains_without_false_positives, cleaned_domains_with_source_without_false_positives
