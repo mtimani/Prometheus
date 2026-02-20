@@ -1,9 +1,9 @@
-
 import os
 import json
 import csv
 import shutil
 import re
+import html as html_lib
 from datetime import datetime
 
 def generate_report(directory):
@@ -90,13 +90,29 @@ def generate_report(directory):
         data["nuclei"] = {}
 
     # 7. GAU (Get All Urls)
-    gau_path = os.path.join(directory, "gau_url_findings.txt")
+    gau_path = os.path.join(directory, "all_urls.txt")
     if os.path.exists(gau_path):
         with open(gau_path, "r") as f:
             # Read lines and filter out empty ones
             data["gau"] = [line.strip() for line in f.readlines() if line.strip()]
     else:
         data["gau"] = []
+
+    # 7.5 JS Secrets
+    secretfinder_path = os.path.join(directory, "js_secrets", "secretfinder_filtered.txt")
+    if os.path.exists(secretfinder_path):
+        with open(secretfinder_path, "r") as f:
+            data["secretfinder"] = [line.strip() for line in f.readlines() if line.strip()]
+    else:
+        data["secretfinder"] = []
+
+    # 7.6 JSLeak
+    jsleak_path = os.path.join(directory, "js_secrets", "jsleak.txt")
+    if os.path.exists(jsleak_path):
+        with open(jsleak_path, "r") as f:
+            data["jsleak"] = [line.strip() for line in f.readlines() if line.strip()]
+    else:
+        data["jsleak"] = []
 
     # 8. Screenshots
     screenshots_dir = os.path.join(directory, "Screenshots", "screens")
@@ -399,6 +415,8 @@ def create_html(data):
                 <button class="tab-btn" onclick="openTab(event, 'nuclei')">Vulnerabilities</button>
                 <button class="tab-btn" onclick="openTab(event, 'gau')">URLs</button>
                 <button class="tab-btn" onclick="openTab(event, 'waf')">WAF</button>
+                <button class="tab-btn" onclick="openTab(event, 'secretfinder')">SecretFinder</button>
+                <button class="tab-btn" onclick="openTab(event, 'jsleak')">JSLeak</button>
                 <button class="tab-btn" onclick="openTab(event, 'screenshots')">Screenshots</button>
                 <button class="tab-btn" onclick="openTab(event, 'statistics')">Statistics</button>
             </div>
@@ -604,6 +622,89 @@ def create_html(data):
                             </tr>
         """
 
+    html += """
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div id="secretfinder" class="tab-content">
+                <div class="card">
+                    <h3>JavaScript Secrets</h3>
+                    <input type="text" id="secretfinderSearch" onkeyup="searchTable('secretfinderSearch', 'secretfinderTable')" class="search-bar" placeholder="Search JS Secrets...">
+                    <table id="secretfinderTable" style="table-layout: fixed;">
+                        <thead>
+                            <tr>
+                                <th style="width: 20%;">Type</th>
+                                <th style="width: 80%;">Finding</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+    """
+    for line in data.get("secretfinder", []):
+         parts = line.split("->")
+         if len(parts) >= 2:
+             credential_type = html_lib.escape(parts[0].strip())
+             finding = "->".join(parts[1:]).strip()
+         else:
+             credential_type = "Unknown"
+             finding = line.strip()
+         
+         html += f"""
+                            <tr>
+                                <td style="width: 20%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{credential_type}</td>
+                                <td style="max-width: 0; width: 80%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-family: monospace;" title="{html_lib.escape(finding)}">{html_lib.escape(finding)}</td>
+                            </tr>
+         """
+    
+    html += """
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div id="jsleak" class="tab-content">
+                <div class="card">
+                    <h3>JSLeak Findings</h3>
+                    <input type="text" id="jsleakSearch" onkeyup="searchTable('jsleakSearch', 'jsleakTable')" class="search-bar" placeholder="Search JSLeak Findings...">
+                    <table id="jsleakTable" style="table-layout: fixed;">
+                        <thead>
+                            <tr>
+                                <th style="width: 30%;">Finding</th>
+                                <th style="width: 70%;">URL</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+    """
+    for line in data.get("jsleak", []):
+         # Extract content between square brackets
+         matches = re.findall(r'\[(.*?)\]', line)
+         
+         if len(matches) >= 3:
+             # Standard format: [Type] [Match] [URL]
+             # matches[0] -> Type (e.g. OpenAI API Key)
+             # matches[1] -> Match (e.g. sk-...)
+             # matches[2] -> URL
+             leak_type = matches[0]
+             finding = matches[1]
+             url = matches[-1]
+         elif len(matches) == 2:
+             # Fallback if only 2 brackets found
+             leak_type = matches[0]
+             finding = matches[1]
+             url = ""
+         else:
+             leak_type = "Raw Log"
+             finding = line
+             url = ""
+
+         html += f"""
+                            <tr>
+                                <td style="max-width: 0; width: 40%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-family: monospace;" title="{html_lib.escape(finding)}">{html_lib.escape(finding)}</td>
+                                <td style="width: 60%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="{html_lib.escape(url)}"><a href="{url}" target="_blank" style="color: var(--accent-color); text-decoration: none;">{html_lib.escape(url)}</a></td>
+                            </tr>
+         """
+    
     html += """
                         </tbody>
                     </table>

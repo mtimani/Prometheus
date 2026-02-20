@@ -35,6 +35,9 @@ gau_path                        = "/usr/bin/gau"
 gowitness_path                  = "/usr/bin/gowitness"
 eyewitness_path                 = "/usr/bin/eyewitness"
 findomain_path                  = "/usr/bin/findomain"
+jsleak_path                    = "/usr/bin/jsleak"
+trufflehog_path                 = "/usr/local/bin/trufflehog"
+secretfinder_path               = "/usr/bin/python3 /opt/SecretFinder/SecretFinder.py"
 
 
 
@@ -48,7 +51,7 @@ WAFS                            = {"assets_number":0, "results":{}}
 def usage():
     print(
 '''
-usage: asset_discovery.py [-h] [-n] [-s] [-w] [-g] [-i] [-S] [-pc PROVIDER_CONFIGURATION_SUBFINDER] [-r DNS_RESOLVER_LIST_FILE] -d DIRECTORY
+usage: asset_discovery.py [-h] [-n] [-s] [-w] [-g] [-j] [-i] [-S] [-pc PROVIDER_CONFIGURATION_SUBFINDER] [-r DNS_RESOLVER_LIST_FILE] -d DIRECTORY
                           (-f HOST_LIST_FILE | -l HOST_LIST [HOST_LIST ...] | -b SUBDOMAIN_LIST_FILE)
 
 options:
@@ -56,7 +59,8 @@ options:
   -n, --nuclei          Use Nuclei scanner to scan found assets
   -s, --screenshot      Use EyeWitness to take screenshots of found web assets
   -w, --webanalyzer     Use Webanalyzer to list used web technologies
-  -g, --gau             Use gau tool to find interesting URLs on found web assets
+  -g, --gau             Use gau and katana tools to find interesting URLs on found web assets
+  -j, --js-secrets      Use JSFinder to find secrets in JS files
   -i, --wafwoof         Use wafw00f to determine the WAF technology protecting the found web assets
   -S, --safe            Limit results to subdomains of the provided root domains
   -pc PROVIDER_CONFIGURATION_SUBFINDER, --provider_configuration_subfinder PROVIDER_CONFIGURATION_SUBFINDER
@@ -182,7 +186,7 @@ def first_domain_scan(directory, hosts, subfinder_provider_configuration_file, a
     found_domains_with_source = []
 
     ## Print to console
-    cprint("\nFinding subdomains for specified root domains:", 'red')
+    cprint("\nFinding subdomains", 'red')
 
     ## Populate found_domains_with_source
     for subdomain in found_domains:
@@ -190,11 +194,6 @@ def first_domain_scan(directory, hosts, subfinder_provider_configuration_file, a
             "subdomain": subdomain,
             "source": "root_domain"
         })
-
-    for domain in root_domains:
-        print('- ' + domain)
-
-    counter = len(root_domains)
 
     ## Loop over root domains
     with concurrent.futures.ThreadPoolExecutor(max_workers=50) as executor:
@@ -406,7 +405,7 @@ def whois(directory,ip_list,ip_dict,ip_dict_with_source):
             output, error = process.communicate()
             whois_list.append(output.decode().lower())
         except:
-            print("- Error: Failed to whois the following IP address: ", end='')
+            print("\t- Error: Failed to whois the following IP address: ", end='')
             cprint(ip + "\n", 'red')
 
     ## Sort - Uniq on the retreived whois_list
@@ -434,7 +433,7 @@ def whois(directory,ip_list,ip_dict,ip_dict_with_source):
             filename = cidr.replace("/","_").strip() + ".txt"
             cnt += 1
         except:
-            print("- Cidrize failed for: ", end='')
+            print("\t- Cidrize failed for: ", end='')
             cprint(filename + "\n", "red")
             continue
 
@@ -623,8 +622,8 @@ def determine_waf(directory):
     ## Open httpx_results file and injest data
     ### Check if httpx_results.txt file exists
     if not os.path.exists(directory + "/httpx_results.txt"):
-        print("- Failed finding WAFs located in front of the found web assets with wafw00f!")
-        print("- The file: ", end='')
+        print("\t- Failed finding WAFs located in front of the found web assets with wafw00f!")
+        print("\t- The file: ", end='')
         cprint(directory + "/httpx_results.txt", 'red', end='')
         print(" cannot be found!")
     else:
@@ -655,12 +654,8 @@ def nuclei_f(directory, domain_list_file = "/domain_list.txt"):
     dir_path = directory + "/Nuclei"
     try:
         os.mkdir(dir_path)
-        print("- Creation of ", end='')
-        cprint(dir_path + "/ directory\n", 'blue')
     except FileExistsError:
-        print("- Directory ", end='')
-        cprint(dir_path + "/", 'blue', end='')
-        print(" already exists")
+        None
     except:
         raise
     
@@ -708,15 +703,15 @@ def nuclei_f(directory, domain_list_file = "/domain_list.txt"):
 #---------Screenshot Function Launch--------#
 def screenshot_f(directory, domain_list_file = "/domain_list.txt"):
     ## Print to console
-    cprint("Screenshots of found web assets with EyeWitness launched!\n",'red')
+    cprint("Screenshots of found web assets with EyeWitness launched\n",'red')
     
     ## EyeWitness tool launch
     ### If root domain list is provided
     if (domain_list_file == "/domain_list.txt"):
-        os.system(eyewitness_path + " --timeout 10 --prepend-https --delay 5 -d " + directory + "/Screenshots -f " + directory + "/httpx_results.txt --no-clear --no-prompt --user-agent 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36'")
+        os.system(eyewitness_path + " --timeout 10 --prepend-https --delay 5 -d " + directory + "/Screenshots -f " + directory + "/httpx_results.txt --no-clear --no-prompt --user-agent 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36' > /dev/null 2>&1")
     ### If subdomain list is provided
     else:
-        os.system(eyewitness_path + " --timeout 10 --prepend-https --delay 5 -d " + directory + "/Screenshots -f " + domain_list_file + " --no-clear --no-prompt --user-agent 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36'")
+        os.system(eyewitness_path + " --timeout 10 --prepend-https --delay 5 -d " + directory + "/Screenshots -f " + domain_list_file + " --no-clear --no-prompt --user-agent 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36' > /dev/null 2>&1")
 
 
 
@@ -740,7 +735,7 @@ def webanalyzer_worker(directory, domain):
         if web_port:
             os.system(webanalyze_path + " -host " + domain + " -output json -silent -search false -redirect 2>/dev/null | jq > " + directory + "/Webanalyzer/" + domain + ".json 2>/dev/null")
     except:
-        print("- Error running Webanalyzer for ", end='')
+        print("\t- Error running Webanalyzer for ", end='')
         cprint(domain + "\n", 'red')
 
 
@@ -748,24 +743,19 @@ def webanalyzer_worker(directory, domain):
 #-------Webanalyzer Function Launch------#
 def webanalyzer_f(directory, found_domains):
     ## Print to console
-    cprint("Finding used technologies by the found web assets with Webanalyzer:", 'red')
+    cprint("Finding used technologies by the found web assets with Webanalyzer", 'red')
 
     ## Create output directories
     try:
         os.mkdir(directory + "/Webanalyzer")
-        print("- Creation of ", end='')
-        cprint(directory + "/Webanalyzer/", 'blue', end='')
-        print("directory")
     except FileExistsError:
-        print("- Directory ", end='')
-        cprint(directory + "/Webanalyzer/", 'blue', end='')
-        print("already exists")
+        None
     except:
         raise
 
     ## Update Webanalyze
     try:
-        os.system(webanalyze_path + " -update")
+        os.system(webanalyze_path + " -update > /dev/null 2>&1")
     except:
         raise
 
@@ -808,7 +798,7 @@ def webanalyzer_f(directory, found_domains):
                         else:
                             technologies[techs]['hostname_versions'][filename_domain] = "NaN"
                     except:
-                        print("- Error running webanalyzer for: ", end='')
+                        print("\t- Error running webanalyzer for: ", end='')
                         cprint(filename_domain + "\n", 'red')
 
     ## Write technologies statistics to file
@@ -817,22 +807,77 @@ def webanalyzer_f(directory, found_domains):
 
 
 
-#--------------Gau Function-------------#
-def gau_f(directory, domain_list_file = "/domain_list.txt"):
+#--------------Gau + Katana Function-------------#
+def gau_katana_f(directory, domain_list_file = "/domain_list.txt", display_output=True):
     ## Print to console
-    cprint("\nFinding interesting URLs based on found web assets\n", 'red')
+    if display_output:
+        cprint("\nFinding interesting URLs based on found web assets\n", 'red')
 
     ## Launch Gau Tool
     try:
         ### If root domain list is provided
         if (domain_list_file == "/domain_list.txt"):
-            os.system("cat " + directory + "/domain_list.txt | " + gau_path + " --threads 5 --o " + directory + "/gau_url_findings.txt --providers wayback,commoncrawl,otx")
+            os.system("cat " + directory + "/domain_list.txt | " + gau_path + " --threads 5 --o " + directory + "/all_urls_gau.txt --providers wayback,commoncrawl,otx --blacklist '.woff,.css,.png,.svg,.jpg,.woff2,.jpeg,.gif,.svg'")
         ### If subdomain list is provided
         else:
-            os.system("cat " + domain_list_file + " | " + gau_path + " --threads 5 --o " + directory + "/gau_url_findings.txt --providers wayback,commoncrawl,otx")
+            os.system("cat " + domain_list_file + " | " + gau_path + " --threads 5 --o " + directory + "/all_urls_gau.txt --providers wayback,commoncrawl,otx --blacklist '.woff,.css,.png,.svg,.jpg,.woff2,.jpeg,.gif,.svg'")
     except:
-        print("- Error running gau tool on found web assets")
+        print("\t- Error running gau tool on found web assets")
 
+    ## Launch Katana Tool
+    try:
+        os.system("katana -u " + directory + "/httpx_results.txt" + " -d 5 -kf all -jc -fx -ef woff,css,png,svg,jpg,woff2,jpeg,gif,svg -o " + directory + "/all_urls_katana.txt > /dev/null 2>&1")
+    except:
+        print("\t- Error running katana tool on found web assets")
+
+    ## Merge Results
+    try:
+        os.system("cat " + directory + "/all_urls_gau.txt >> " + directory + "/all_urls.txt.bak")
+        os.system("cat " + directory + "/all_urls_katana.txt >> " + directory + "/all_urls.txt.bak")
+        os.system("cat " + directory + "/all_urls.txt.bak | sort | uniq > " + directory + "/all_urls.txt")
+        os.system("rm -rf " + directory + "/all_urls.txt.bak " + directory + "/all_urls_gau.txt " + directory + "/all_urls_katana.txt")
+    except:
+        print("\t- Error merging gau and katana results")
+
+
+
+#--------------JS Secrets---------------#
+def js_secrets_f(directory, domain_list_file = "/domain_list.txt"):
+    ## Print to console
+    cprint("Finding JS secrets based on found web assets\n", 'red')
+
+    ## Retrieve gau + katana results or launch them if gau + katana were not launched previously
+    if (not(os.path.exists(directory + "/all_urls.txt"))):
+        gau_katana_f(directory, domain_list_file, display_output=False)
+    
+    if (not(os.path.exists(directory + "/all_urls.txt"))):
+        print("\t- Error: all_urls.txt not found, cannot perform JS secrets discovery")
+        return
+
+    ## Create js folder
+    js_directory = directory + "/js_secrets"
+    if not os.path.exists(js_directory):
+        os.makedirs(js_directory)
+    
+    ## Filter JS files
+    os.system(f"cat {directory}/all_urls.txt | grep -E '\.js$' | sort -u > {js_directory}/js_files.txt")
+
+    ## Run httpx to find alive URLs
+    os.system(f"httpx -silent -l {js_directory}/js_files.txt -threads 200 -mc 200 | tee {js_directory}/js_files_alive.txt > /dev/null 2>&1")
+
+    ## Run SecretFinder on alive JS files
+    os.system(f"while read url; do {secretfinder_path} -i $url -o cli >> {js_directory}/secretfinder.txt; done < {js_directory}/js_files_alive.txt")
+
+    ## Filter SecretFinder results
+    os.system(f"cat {js_directory}/secretfinder.txt | grep -E '\->' | sort | uniq > {js_directory}/secretfinder_filtered.txt")
+
+    ## Run JSLeak
+    jsleak_config = "/usr/bin/jsleak-default.yaml"
+    
+    if not os.path.exists(jsleak_config):
+        jsleak_config = "jsleak-default.yaml"
+
+    os.system(f"cat {js_directory}/js_files_alive.txt | jsleak -c 20 -s -t {jsleak_config} >> {js_directory}/jsleak.txt")
 
 
 #--------Arguments Parse Function-------#
@@ -847,7 +892,8 @@ def parse_command_line():
     parser.add_argument("-n", "--nuclei", dest='n', action='store_true', help="Use Nuclei scanner to scan found assets")
     parser.add_argument("-s", "--screenshot", dest='s', action='store_true', help="Use EyeWitness to take screenshots of found web assets")
     parser.add_argument("-w", "--webanalyzer", dest='w', action='store_true', help="Use Webanalyzer to list used web technologies")
-    parser.add_argument("-g", "--gau", dest='g', action='store_true', help="Use gau tool to find interesting URLs on found web assets")
+    parser.add_argument("-g", "--gau", dest='g', action='store_true', help="Use gau and katana tools to find interesting URLs on found web assets")
+    parser.add_argument("-j", "--js-secrets", dest='j', action='store_true', help="Use JSFinder to find secrets in JS files")
     parser.add_argument("-i", "--wafwoof", dest='i', action='store_true', help="Use wafw00f to determine the WAF technology protecting the found web assets")
     parser.add_argument("-S", "--safe", dest='safe', action='store_true', help="Limit results to subdomains of the provided root domains")
     parser.add_argument("-pc", "--provider_configuration_subfinder", dest="provider_configuration_subfinder", help="Specify a subfinder configuration file to pass API keys for various providers")
@@ -873,6 +919,7 @@ def main(args):
     do_screenshots                      = args.s
     do_webanalyzer                      = args.w
     do_gau                              = args.g
+    do_js_secrets                       = args.j
     do_wafwoof                          = args.i
     do_safe                             = args.safe
 
@@ -965,10 +1012,16 @@ def main(args):
         print("- Perform Web Technologies enumeration => ", end='')
         cprint("NO", "red")
     if (do_gau):
-        print("- Perform GAU interesting URLs enumeration => ", end='')
+        print("- Perform GAU and Katana interesting URLs enumeration => ", end='')
         cprint("YES", "green")
     else:
-        print("- Perform GAU interesting URLs enumeration => ", end='')
+        print("- Perform GAU and Katana interesting URLs enumeration => ", end='')
+        cprint("NO", "red")
+    if (do_js_secrets):
+        print("- Perform JS Secrets enumeration => ", end='')
+        cprint("YES", "green")
+    else:
+        print("- Perform JS Secrets enumeration => ", end='')
         cprint("NO", "red")
     if (do_screenshots):
         print("- Capture Screenshots on found subdomains => ", end='')
@@ -1039,14 +1092,23 @@ def main(args):
         else:
             webanalyzer_f(directory, subdomains)
 
-    ## Gau function call
+    ## Gau + Katana function call
     if (do_gau):
         ### If root domain list is provided
         if (not subdomains):
-            gau_f(directory)
+            gau_katana_f(directory)
         ### If subdomain list is provided
         else:
-            gau_f(directory, subdomain_list_file)
+            gau_katana_f(directory, subdomain_list_file)
+
+    ## JS Secrets function call
+    if (do_js_secrets):
+        ### If root domain list is provided
+        if (not subdomains):
+            js_secrets_f(directory)
+        ### If subdomain list is provided
+        else:
+            js_secrets_f(directory, subdomain_list_file)
 
     ## Take screenshots of found web assets if -s is specified
     if (do_screenshots):

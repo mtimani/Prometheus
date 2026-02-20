@@ -147,6 +147,64 @@ command -v "nuclei" >/dev/null 2>&1
         fi
     fi
 
+## Install katana
+command -v "katana" >/dev/null 2>&1
+    if [[ $? -ne 0 ]]; then
+        if [ "$OS" = "Kali" ] || [ "$OS" = "Ubuntu" ]; then
+            export GO111MODULE="on"
+            CGO_ENABLED=1 go install github.com/projectdiscovery/katana/cmd/katana@latest
+            mv /root/go/bin/katana /usr/bin/
+            katana -up
+        elif [ "$OS" = "Debian" ]; then
+            export GOROOT=/usr/local/go
+            export GOPATH=$HOME/go
+            export PATH=$GOPATH/bin:$GOROOT/bin:$PATH
+            export GO111MODULE="on"
+            CGO_ENABLED=1 go install github.com/projectdiscovery/katana/cmd/katana@latest
+            mv /root/go/bin/katana /usr/bin/
+            katana -up
+        else
+            go env -w GO111MODULE=off
+            CGO_ENABLED=1 go install github.com/projectdiscovery/katana/cmd/katana@latest
+            katana -up
+        fi
+    fi
+
+## Install jsleak
+command -v "jsleak" >/dev/null 2>&1
+    if [[ $? -ne 0 ]]; then
+        if [ "$OS" = "Kali" ] || [ "$OS" = "Ubuntu" ]; then
+            export GO111MODULE="on"
+            go install github.com/channyein1337/jsleak@latest
+            mv /root/go/bin/jsleak /usr/bin/
+        elif [ "$OS" = "Debian" ]; then
+            export GOROOT=/usr/local/go
+            export GOPATH=$HOME/go
+            export PATH=$GOPATH/bin:$GOROOT/bin:$PATH
+            export GO111MODULE="on"
+            go install github.com/channyein1337/jsleak@latest
+            mv /root/go/bin/jsleak /usr/bin/
+        else
+            go env -w GO111MODULE=off
+            go install github.com/channyein1337/jsleak@latest
+        fi
+    fi
+
+## Install SecretFinder
+command -v "secretfinder" >/dev/null 2>&1
+    if [[ $? -ne 0 ]]; then
+        apt-get install python3-pip -y
+        current_dir=$(pwd)
+        cd /opt/
+        git clone https://github.com/m4ll0k/SecretFinder.git
+        chown -R $(echo "$USER"):$(echo "$USER") SecretFinder
+        cd SecretFinder
+        pip3 install -r requirements.txt --break-system-packages
+        chmod +x SecretFinder.py
+        alias secretfinder='/usr/bin/python3 /opt/SecretFinder/SecretFinder.py'
+        cd $current_dir
+    fi
+
 ## Install eyewitness
 command -v "eyewitness" >/dev/null 2>&1
     if [[ $? -ne 0 ]]; then
@@ -351,6 +409,12 @@ else
   pip3 install aiodnsbrute cidrize alive-progress wafw00f tldextract termcolor dnsrecon "urllib3<2" --break-system-packages
 fi
 
+# Patch aiodnsbrute issue with asyncio (Python 3.10+)
+python3_minor_version=$(python3 -c 'import sys; print(sys.version_info.minor)')
+if [ "$python3_minor_version" -ge 10 ]; then
+    find /usr/local/lib/python3* -path "*/aiodnsbrute/cli.py" -exec sed -i 's/self.loop = asyncio.get_event_loop()/try:\n            self.loop = asyncio.get_event_loop()\n        except RuntimeError:\n            self.loop = asyncio.new_event_loop()\n            asyncio.set_event_loop(self.loop)/g' {} +
+fi
+
 # Download ssh-audit
 if [ ! -d ' /opt/ssh-audit' ]; then
     cd /opt/
@@ -474,6 +538,8 @@ chown $(echo "$USER"):$(echo "$USER") /usr/bin/asset_discovery.py
 mv report_generator.py /usr/bin/
 chmod +x /usr/bin/report_generator.py
 chown $(echo "$USER"):$(echo "$USER") /usr/bin/report_generator.py
+mv jsleak-default.yaml /usr/bin/
+chown $(echo "$USER"):$(echo "$USER") /usr/bin/jsleak-default.yaml
 
 if [ "$OS" = "Exegol" ]; then
     exec zsh

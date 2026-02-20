@@ -29,9 +29,12 @@ This tool is intended for educational purposes only. Performing hacking attempts
 - httpx (https://github.com/projectdiscovery/httpx)
 - nuclei (https://github.com/projectdiscovery/nuclei)
 - gau (https://github.com/lc/gau)
+- katana (https://github.com/projectdiscovery/katana)
 - webanalyze (https://github.com/rverton/webanalyze)
 - eyewitness (https://github.com/RedSiege/EyeWitness)
 - wafw00f (https://github.com/EnableSecurity/wafw00f)
+- SecretFinder (https://github.com/m4ll0k/SecretFinder)
+- jsleak (https://github.com/0xTeles/jsleak)
 
 ## 📦 blackbox_audit is using the following tools to generate its results
 - nslookup

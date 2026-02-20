@@ -1,6 +1,8 @@
 FROM debian:12
 
-ENV DEBIAN_FRONTEND noninteractive
+ENV DEBIAN_FRONTEND=noninteractive
+ENV GOPATH=/root/go
+ENV PATH=$PATH:/usr/local/go/bin:$GOPATH/bin
 
 RUN echo "LC_ALL=en_US.UTF-8" >> /etc/environment
 RUN echo "en_US.UTF-8 UTF-8" >> /etc/locale.gen
@@ -16,6 +18,7 @@ RUN mkdir /setup
 RUN mkdir -p /home/user/
 
 COPY *.py /setup/
+COPY *.yaml /setup/
 COPY setup.sh /setup/
 
 RUN chmod +x /setup/setup.sh
