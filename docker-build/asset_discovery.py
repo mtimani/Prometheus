@@ -13,7 +13,7 @@ import re
 import threading
 import tldextract
 import json
-import alive_progress
+import time
 import concurrent.futures
 import ipaddress
 import operator
@@ -24,6 +24,42 @@ from report_generator import generate_report
 
 #----------------Colors-----------------#
 from termcolor import colored, cprint
+
+class Spinner:
+    def __init__(self, message, color='red'):
+        self.message = message
+        self.color = color
+        self.stop_event = threading.Event()
+        self.thread = threading.Thread(target=self._spin)
+
+    def _spin(self):
+        spinner_chars = ['|', '/', '-', '\\']
+        idx = 0
+        while not self.stop_event.is_set():
+            sys.stdout.write(f"\r{colored(self.message, self.color)} {spinner_chars[idx]} ")
+            sys.stdout.flush()
+            time.sleep(0.1)
+            idx = (idx + 1) % len(spinner_chars)
+
+    def start(self):
+        self.stop_event.clear()
+        if not self.thread.is_alive():
+             self.thread.start()
+        return self
+
+    def stop(self):
+        self.stop_event.set()
+        if self.thread.is_alive():
+            self.thread.join()
+        sys.stdout.write(f"\r{colored(self.message, 'green')} \u2713                   \n")
+        sys.stdout.flush()
+
+    def __enter__(self):
+        return self.start()
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self.stop()
+
 
 
 
@@ -186,7 +222,8 @@ def first_domain_scan(directory, hosts, subfinder_provider_configuration_file, a
     found_domains_with_source = []
 
     ## Print to console
-    cprint("\nFinding subdomains", 'red')
+    s = Spinner("- Finding subdomains for specified root domains")
+    s.start()
 
     ## Populate found_domains_with_source
     for subdomain in found_domains:
@@ -206,6 +243,7 @@ def first_domain_scan(directory, hosts, subfinder_provider_configuration_file, a
     found_domains = sorted(set(found_domains))
     found_domains_with_source = sorted(found_domains_with_source, key=lambda x: x["subdomain"])
 
+    s.stop()
     return found_domains.copy(), found_domains_with_source.copy()
 
 
@@ -213,7 +251,8 @@ def first_domain_scan(directory, hosts, subfinder_provider_configuration_file, a
 #-------------httpx Function--------------#
 def httpx_f(directory, subdomain_list_file):
     ## Print to console
-    cprint("\nRunning httpx, a project discovery tool on the provided subdomains\n", 'red')
+    s = Spinner("- Running httpx")
+    s.start()
 
     ## httpx - project discovery
     bashCommand = "httpx -l " + subdomain_list_file + " -t 150 -rl 3000 -p http:80,https:443,http:8080,https:8443,http:8000,http:3000,http:5000,http:10000 -timeout 3 -probe"
@@ -240,11 +279,14 @@ def domains_discovery(directory, hosts, subfinder_provider_configuration_file, a
     found_domains, found_domains_with_source  = first_domain_scan(directory, hosts, subfinder_provider_configuration_file, aiodnsbrute_dns_resolver_list_file)
 
     ## Remove wildcard domains
-    cprint("\nRunning wildcard DNS cleaning function\n", 'red')
+    s = Spinner("- Running wildcard DNS cleaning function")
+    s.start()
     cleaned_domains, cleaned_domains_with_source = dns_resolver(found_domains_with_source)
+    s.stop()
 
     ## httpx - project discovery
-    cprint("Running httpx\n", 'red')
+    s = Spinner("- Running httpx")
+    s.start()
 
     with open(directory + "/found_domains.txt.tmp", "w") as fp:
         for item in cleaned_domains:
@@ -255,6 +297,8 @@ def domains_discovery(directory, hosts, subfinder_provider_configuration_file, a
     output, error = process.communicate()
     out = output.decode().splitlines()
     
+    s.stop()
+
     urls = []
 
     for line in out:
@@ -270,7 +314,7 @@ def domains_discovery(directory, hosts, subfinder_provider_configuration_file, a
         os.remove(directory + "/found_domains.txt.tmp")
 
     ## SANextract
-    cprint("Running SANextract\n", 'red')
+    s = Spinner("- Running SANextract").start()
 
     temp = []
     temp_with_source = []
@@ -288,9 +332,12 @@ def domains_discovery(directory, hosts, subfinder_provider_configuration_file, a
                         "source": "SANextract"
                     })
 
+    s.stop()
+
     ## Remove wildcard domains (again)
-    cprint("Running wildcard DNS cleaning function\n", 'red')
+    s = Spinner("- Running wildcard DNS cleaning function").start()
     cleaned_temp, cleaned_temp_with_source = dns_resolver(temp_with_source)
+    s.stop()
     cleaned_domains.extend(cleaned_temp)
     cleaned_domains_with_source.extend(cleaned_temp_with_source)
     cleaned_domains = sorted(set(cleaned_domains))
@@ -335,7 +382,7 @@ def domains_discovery(directory, hosts, subfinder_provider_configuration_file, a
 #---------IP Discovery Function---------#
 def IP_discovery(directory, found_domains, found_domains_with_source):
     ## Print to console
-    cprint("Finding IPs for found subdomains\n",'red')
+    s = Spinner("- Finding IPs for found subdomains").start()
 
     ## Variables initialization
     ip_dict = {}
@@ -374,6 +421,7 @@ def IP_discovery(directory, found_domains, found_domains_with_source):
         for item in ip_list:
             fp.write("%s\n" % item)
 
+    s.stop()
     return (ip_list,ip_dict, ip_dict_with_source)
 
 
@@ -381,7 +429,7 @@ def IP_discovery(directory, found_domains, found_domains_with_source):
 #-------------Whois Function------------#
 def whois(directory,ip_list,ip_dict,ip_dict_with_source):
     ## Print to console
-    cprint("Whois magic\n",'red')
+    s = Spinner("- Whois magic").start()
 
     ## Create Whois directory
     try:
@@ -502,6 +550,8 @@ def whois(directory,ip_list,ip_dict,ip_dict_with_source):
             line = key + "," + str(subdomain_stats[key]) + "\n"
             fp.write(line)
 
+    s.stop()
+
 
 
 #--------Parse percentage function-------#
@@ -614,7 +664,7 @@ def determine_waf_worker(url):
 #---------Determine WAF Function---------#
 def determine_waf(directory):
     ## Print to console
-    cprint("Finding WAFs located in front of the found web assets with wafw00f\n", 'red')
+    s = Spinner("- Finding WAFs located in front of the found web assets with wafw00f").start()
 
     ## Constants declarations
     urls = []
@@ -642,13 +692,15 @@ def determine_waf(directory):
         ## Output result to file
         with open(directory + "/waf_results.json","w") as fp:
             fp.write(json.dumps(WAFS, sort_keys=True, indent=4))
+    
+    s.stop()
 
 
 
 #---------Nuclei Function Launch--------#
 def nuclei_f(directory, domain_list_file = "/domain_list.txt"):
     ## Print to console
-    cprint("Nuclei scan launched!\n",'red')
+    s = Spinner("- Nuclei scan launched").start()
 
     ## Create Nuclei output directory
     dir_path = directory + "/Nuclei"
@@ -697,13 +749,14 @@ def nuclei_f(directory, domain_list_file = "/domain_list.txt"):
                             to_write["other"].append(l)
 
             f_write.write(json.dumps(to_write, indent=4))
+    s.stop()
 
 
 
 #---------Screenshot Function Launch--------#
 def screenshot_f(directory, domain_list_file = "/domain_list.txt"):
     ## Print to console
-    cprint("Screenshots of found web assets with EyeWitness launched\n",'red')
+    s = Spinner("- Screenshots of found web assets with EyeWitness launched").start()
     
     ## EyeWitness tool launch
     ### If root domain list is provided
@@ -712,6 +765,8 @@ def screenshot_f(directory, domain_list_file = "/domain_list.txt"):
     ### If subdomain list is provided
     else:
         os.system(eyewitness_path + " --timeout 10 --prepend-https --delay 5 -d " + directory + "/Screenshots -f " + domain_list_file + " --no-clear --no-prompt --user-agent 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36' > /dev/null 2>&1")
+
+    s.stop()
 
 
 
@@ -743,7 +798,7 @@ def webanalyzer_worker(directory, domain):
 #-------Webanalyzer Function Launch------#
 def webanalyzer_f(directory, found_domains):
     ## Print to console
-    cprint("Finding used technologies by the found web assets with Webanalyzer", 'red')
+    s = Spinner("- Finding used technologies by the found web assets with Webanalyzer").start()
 
     ## Create output directories
     try:
@@ -804,6 +859,8 @@ def webanalyzer_f(directory, found_domains):
     ## Write technologies statistics to file
     with open(directory + "/technologies_statistics.json", "w") as fp:
         fp.write(json.dumps(technologies, sort_keys=False, indent=4))
+    
+    s.stop()
 
 
 
@@ -811,7 +868,7 @@ def webanalyzer_f(directory, found_domains):
 def gau_katana_f(directory, domain_list_file = "/domain_list.txt", display_output=True):
     ## Print to console
     if display_output:
-        cprint("\nFinding interesting URLs based on found web assets\n", 'red')
+        s = Spinner("- Finding interesting URLs based on found web assets").start()
 
     ## Launch Gau Tool
     try:
@@ -838,13 +895,15 @@ def gau_katana_f(directory, domain_list_file = "/domain_list.txt", display_outpu
         os.system("rm -rf " + directory + "/all_urls.txt.bak " + directory + "/all_urls_gau.txt " + directory + "/all_urls_katana.txt")
     except:
         print("\t- Error merging gau and katana results")
+    
+    s.stop()
 
 
 
 #--------------JS Secrets---------------#
 def js_secrets_f(directory, domain_list_file = "/domain_list.txt"):
     ## Print to console
-    cprint("Finding JS secrets based on found web assets\n", 'red')
+    s = Spinner("- Finding JS secrets based on found web assets").start()
 
     ## Retrieve gau + katana results or launch them if gau + katana were not launched previously
     if (not(os.path.exists(directory + "/all_urls.txt"))):
@@ -878,6 +937,8 @@ def js_secrets_f(directory, domain_list_file = "/domain_list.txt"):
         jsleak_config = "jsleak-default.yaml"
 
     os.system(f"cat {js_directory}/js_files_alive.txt | jsleak -c 20 -s -t {jsleak_config} >> {js_directory}/jsleak.txt")
+
+    s.stop()
 
 
 #--------Arguments Parse Function-------#
@@ -1042,6 +1103,10 @@ def main(args):
     else:
         print("- Safe Mode (No False Positives) => ", end='')
         cprint("NO", "red")
+
+    print()
+    print()
+    cprint("🏗️  Running:", "blue")
 
     ## Domains discovery function call in the case subdomains are not provided and only root domains are provided
     if (not subdomains):
