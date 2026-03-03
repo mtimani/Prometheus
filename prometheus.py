@@ -30,7 +30,7 @@ mutually exclusive arguments:
 def usage_asset_discovery():
     print(
 '''
-usage: prometheus.py asset_discovery [-h] [-n] [-s] [-w] [-g] [-j] [-i] [-S]
+usage: prometheus.py asset_discovery [-h] [-n] [-s] [-w] [-g] [-j [FILE]] [-i] [-S]
                                      [-pc PROVIDER_CONFIGURATION_SUBFINDER]
                                      [-r DNS_RESOLVER_LIST_FILE] -d DIRECTORY
                                      (-f HOST_LIST_FILE | -l HOST_LIST [HOST_LIST ...] | -b SUBDOMAIN_LIST_FILE)
@@ -41,7 +41,8 @@ options:
   -w, --webanalyzer     Use Webanalyzer to list used web technologies
   -g, --gau             Use gau and katana tools to find interesting URLs on 
                         found web assets
-  -j, --js-secrets      Use JSFinder to find secrets in JS files
+  -j, --js-secrets [FILE]
+                        Use JSFinder to find secrets in JS files. Optionally provide a custom jsleak config file
   -i, --wafwoof         Use wafw00f to determine the WAF technology protecting
                         the found web assets
   -S, --safe            Limit results to subdomains of the provided root domains
@@ -135,7 +136,8 @@ def filter_params(command, function):
         (r'(-f|--filename)\s+(\S+)', "host list file"),
         (r'(-b|--bypass-domain-discovery)\s+(\S+)', "subdomain list file"),
         (r'(-pc|--provider_configuration_subfinder)\s+(\S+)', "subfinder config"),
-        (r'(-r|--dns-resolver-list)\s+(\S+)', "DNS resolver file")
+        (r'(-r|--dns-resolver-list)\s+(\S+)', "DNS resolver file"),
+        (r'(-j|--js-secrets)\s+([^-]\S*)', "JS config file")
     ]
 
     for pattern, description in path_args:
@@ -210,7 +212,7 @@ def main():
 | |_) | '__/ _ \\| '_ ` _ \\ / _ \\ __| '_ \\ / _ \\ | | / __|
 |  __/| | | (_) | | | | | |  __/ |_| | | |  __/ |_| \\__ \\
 |_|   |_|  \\___/|_| |_| |_|\\___|\\__|_| |_|\\___|\\__,_|___/
-                                           Version: 1.0.4
+                                           Version: 1.0.5
                                            Author: mtimani
     """)
 

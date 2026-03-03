@@ -87,7 +87,7 @@ WAFS                            = {"assets_number":0, "results":{}}
 def usage():
     print(
 '''
-usage: asset_discovery.py [-h] [-n] [-s] [-w] [-g] [-j] [-i] [-S] [-pc PROVIDER_CONFIGURATION_SUBFINDER] [-r DNS_RESOLVER_LIST_FILE] -d DIRECTORY
+usage: asset_discovery.py [-h] [-n] [-s] [-w] [-g] [-j [FILE]] [-i] [-S] [-pc PROVIDER_CONFIGURATION_SUBFINDER] [-r DNS_RESOLVER_LIST_FILE] -d DIRECTORY
                           (-f HOST_LIST_FILE | -l HOST_LIST [HOST_LIST ...] | -b SUBDOMAIN_LIST_FILE)
 
 options:
@@ -96,7 +96,8 @@ options:
   -s, --screenshot      Use EyeWitness to take screenshots of found web assets
   -w, --webanalyzer     Use Webanalyzer to list used web technologies
   -g, --gau             Use gau and katana tools to find interesting URLs on found web assets
-  -j, --js-secrets      Use JSFinder to find secrets in JS files
+  -j, --js-secrets [FILE]
+                        Use JSFinder to find secrets in JS files. Optionally provide a custom jsleak config file
   -i, --wafwoof         Use wafw00f to determine the WAF technology protecting the found web assets
   -S, --safe            Limit results to subdomains of the provided root domains
   -pc PROVIDER_CONFIGURATION_SUBFINDER, --provider_configuration_subfinder PROVIDER_CONFIGURATION_SUBFINDER
@@ -901,7 +902,7 @@ def gau_katana_f(directory, domain_list_file = "/domain_list.txt", display_outpu
 
 
 #--------------JS Secrets---------------#
-def js_secrets_f(directory, domain_list_file = "/domain_list.txt"):
+def js_secrets_f(directory, domain_list_file = "/domain_list.txt", js_config = None):
     ## Print to console
     s = Spinner("- Finding JS secrets based on found web assets").start()
 
@@ -931,10 +932,12 @@ def js_secrets_f(directory, domain_list_file = "/domain_list.txt"):
     os.system(f"cat {js_directory}/secretfinder.txt | grep -E '\->' | sort | uniq > {js_directory}/secretfinder_filtered.txt")
 
     ## Run JSLeak
-    jsleak_config = "/usr/bin/jsleak-default.yaml"
-    
-    if not os.path.exists(jsleak_config):
-        jsleak_config = "jsleak-default.yaml"
+    if js_config and os.path.exists(js_config):
+        jsleak_config = js_config
+    else:
+        jsleak_config = "/usr/bin/jsleak-default.yaml"
+        if not os.path.exists(jsleak_config):
+            jsleak_config = "jsleak-default.yaml"
 
     os.system(f"cat {js_directory}/js_files_alive.txt | jsleak -c 20 -s -t {jsleak_config} >> {js_directory}/jsleak.txt")
 
@@ -954,7 +957,7 @@ def parse_command_line():
     parser.add_argument("-s", "--screenshot", dest='s', action='store_true', help="Use EyeWitness to take screenshots of found web assets")
     parser.add_argument("-w", "--webanalyzer", dest='w', action='store_true', help="Use Webanalyzer to list used web technologies")
     parser.add_argument("-g", "--gau", dest='g', action='store_true', help="Use gau and katana tools to find interesting URLs on found web assets")
-    parser.add_argument("-j", "--js-secrets", dest='j', action='store_true', help="Use JSFinder to find secrets in JS files")
+    parser.add_argument("-j", "--js-secrets", dest='j', nargs='?', const=True, default=False, metavar='FILE', help="Use JSFinder to find secrets in JS files. Optionally provide a custom jsleak config file")
     parser.add_argument("-i", "--wafwoof", dest='i', action='store_true', help="Use wafw00f to determine the WAF technology protecting the found web assets")
     parser.add_argument("-S", "--safe", dest='safe', action='store_true', help="Limit results to subdomains of the provided root domains")
     parser.add_argument("-pc", "--provider_configuration_subfinder", dest="provider_configuration_subfinder", help="Specify a subfinder configuration file to pass API keys for various providers")
@@ -1168,12 +1171,13 @@ def main(args):
 
     ## JS Secrets function call
     if (do_js_secrets):
+        js_config_file = do_js_secrets if isinstance(do_js_secrets, str) else None
         ### If root domain list is provided
         if (not subdomains):
-            js_secrets_f(directory)
+            js_secrets_f(directory, js_config=js_config_file)
         ### If subdomain list is provided
         else:
-            js_secrets_f(directory, subdomain_list_file)
+            js_secrets_f(directory, subdomain_list_file, js_config=js_config_file)
 
     ## Take screenshots of found web assets if -s is specified
     if (do_screenshots):
