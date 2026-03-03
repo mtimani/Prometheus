@@ -897,7 +897,8 @@ def gau_katana_f(directory, domain_list_file = "/domain_list.txt", display_outpu
     except:
         print("\t- Error merging gau and katana results")
     
-    s.stop()
+    if display_output:
+        s.stop()
 
 
 
