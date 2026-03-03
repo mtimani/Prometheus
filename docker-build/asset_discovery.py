@@ -1082,8 +1082,15 @@ def main(args):
         print("- Perform GAU and Katana interesting URLs enumeration => ", end='')
         cprint("NO", "red")
     if (do_js_secrets):
+        if isinstance(do_js_secrets, str):
+            if (not(os.path.exists(do_js_secrets))):
+                cprint("\nError! The specified jsleak config file: %s does not exist!\n" % (do_js_secrets), 'red')
+                exit_abnormal()
         print("- Perform JS Secrets enumeration => ", end='')
         cprint("YES", "green")
+        if isinstance(do_js_secrets, str):
+            print("- Custom jsleak config file: ", end='')
+            cprint("%s" % (do_js_secrets), "green")
     else:
         print("- Perform JS Secrets enumeration => ", end='')
         cprint("NO", "red")
